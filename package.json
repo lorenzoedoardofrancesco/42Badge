@@ -1,6 +1,6 @@
 {
-  "name": "badge42",
-  "version": "0.1.0",
+  "name": "42badge",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,45 +13,41 @@
     "db:push": "prisma db push --schema=./db/schema.prisma",
     "db:seed": "npx prisma db seed",
     "db:studio": "prisma studio --schema=./db/schema.prisma",
-    "now-build": "yarn db:generate && next build",
-    "assets:download": "ts-node --compiler-options {\"module\":\"CommonJS\"} scripts/downloadAssets.ts"
+    "postinstall": "prisma generate --schema=./db/schema.prisma"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} db/seed.ts"
   },
   "dependencies": {
-    "@emotion/react": "^11.8.1",
-    "@icons-pack/react-simple-icons": "^4.6.1",
-    "@prisma/client": "^3.11.0",
-    "axios": "^0.26.0",
+    "@emotion/react": "^11.13.0",
+    "@icons-pack/react-simple-icons": "^9.7.0",
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.7.0",
     "lodash-es": "^4.17.21",
-    "next": "12.1.0",
-    "next-auth": "^4.2.1",
+    "next": "^14.2.0",
+    "next-auth": "^4.24.0",
     "node-cache": "^5.1.2",
     "p-queue": "6.6.2",
-    "react": "^17.0.2",
-    "react-copy-to-clipboard": "^5.0.4",
-    "react-dom": "^17.0.2",
-    "react-icons": "^4.3.1",
+    "react": "^18.3.0",
+    "react-copy-to-clipboard": "^5.1.0",
+    "react-dom": "^18.3.0",
+    "react-icons": "^5.3.0",
     "string-pixel-width": "^1.10.0"
   },
   "devDependencies": {
     "@rvxlab/tailwind-plugin-ios-full-height": "^1.1.0",
-    "@types/lodash-es": "^4.17.6",
-    "@types/node": "17.0.21",
-    "@types/react": "17.0.39",
-    "@types/react-copy-to-clipboard": "^5.0.2",
-    "@types/react-dom": "^17.0.13",
-    "@types/sharp": "^0.29.5",
-    "@types/string-pixel-width": "^1.7.2",
-    "autoprefixer": "^10.4.2",
-    "eslint": "8.10.0",
-    "eslint-config-next": "12.1.0",
-    "postcss": "^8.4.7",
-    "prisma": "^3.11.0",
-    "sharp": "^0.30.2",
-    "tailwindcss": "^3.0.23",
-    "ts-node": "^10.6.0",
-    "typescript": "4.6.2"
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-copy-to-clipboard": "^5.0.7",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0",
+    "postcss": "^8.4.47",
+    "prisma": "^5.22.0",
+    "tailwindcss": "^3.4.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.6.0"
   }
 }

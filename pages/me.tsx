@@ -55,9 +55,7 @@ const NewUserPage = () => {
       </label>
       <hr className="border-neutral-300" />
       <Link href={"/"}>
-        <a>
-          <p>← Return Edit Badge Page</p>
-        </a>
+        <p>← Return Edit Badge Page</p>
       </Link>
     </Layout>
   );

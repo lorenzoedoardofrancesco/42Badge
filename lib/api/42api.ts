@@ -34,10 +34,8 @@ axiosClientFor42.interceptors.request.use(
   async (config) => {
     const token = apiCache.get<Get42OauthToken>("token");
     const access_token = token ? token.access_token : null;
-    config.headers = {
-      Authorization: `Bearer ${access_token}`,
-      Accept: "application/json",
-    };
+    config.headers.set("Authorization", `Bearer ${access_token}`);
+    config.headers.set("Accept", "application/json");
     return config;
   },
   (error) => {

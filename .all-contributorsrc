@@ -1,6 +1,6 @@
 {
-  "projectName": "badge42",
-  "projectOwner": "JaeSeoKim",
+  "projectName": "42badge",
+  "projectOwner": "lorenzoedoardofrancesco",
   "repoType": "github",
   "repoHost": "https://github.com",
   "files": [
@@ -10,6 +10,28 @@
   "commit": false,
   "commitConvention": "gitmoji",
   "contributors": [
+    {
+      "login": "lorenzoedoardofrancesco",
+      "name": "Lorenzo Simanic",
+      "avatar_url": "https://avatars.githubusercontent.com/lorenzoedoardofrancesco",
+      "profile": "https://github.com/lorenzoedoardofrancesco",
+      "contributions": [
+        "code",
+        "maintenance",
+        "infra"
+      ]
+    },
+    {
+      "login": "JaeSeoKim",
+      "name": "JaeSeoKim",
+      "avatar_url": "https://avatars.githubusercontent.com/u/43610824?v=4",
+      "profile": "https://github.com/JaeSeoKim",
+      "contributions": [
+        "code",
+        "ideas",
+        "infra"
+      ]
+    },
     {
       "login": "cos18",
       "name": "Sungwoo Park",

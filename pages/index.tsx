@@ -153,8 +153,8 @@ const Home = () => {
     }
   }, [selectedCursus, data.extended42Data.coalitions.length]);
 
-  const statsUrl = `https://badge42.vercel.app/api/v2/${data.id}/stats?cursusId=${cursusId}&coalitionId=${coalitionId}`;
-  const projectUrl = `https://badge42.vercel.app/api/v2/${data.id}/project`;
+  const statsUrl = `https://42badge.vercel.app/api/v2/${data.id}/stats?cursusId=${cursusId}&coalitionId=${coalitionId}`;
+  const projectUrl = `https://42badge.vercel.app/api/v2/${data.id}/project`;
 
   const projectList = useMemo(
     () =>
@@ -181,8 +181,8 @@ const Home = () => {
 
   return (
     <Layout>
-      <h1 id="badge42" className="text-3xl font-bold">
-        Badge42
+      <h1 id="42badge" className="text-3xl font-bold">
+        42Badge
       </h1>
       <p>🚀 Dynamically generated 42 badge for your git readmes.</p>
       <h2 id="stats" className="text-2xl font-bold">
@@ -252,13 +252,13 @@ const Home = () => {
       <label>
         <p className="text-neutral-600">*markdown</p>{" "}
         <Code
-          code={`[![${data.extended42Data.login}'s 42 stats](${statsUrl})](https://github.com/JaeSeoKim/badge42)`}
+          code={`[![${data.extended42Data.login}'s 42 stats](${statsUrl})](https://42badge.vercel.app)`}
         />
       </label>
       <label>
         <p className="text-neutral-600">*html</p>{" "}
         <Code
-          code={`<a href="https://github.com/JaeSeoKim/badge42"><img src="${statsUrl}" alt="${data.extended42Data.login}'s 42 stats" /></a>`}
+          code={`<a href="https://42badge.vercel.app"><img src="${statsUrl}" alt="${data.extended42Data.login}'s 42 stats" /></a>`}
         />
       </label>
       <hr />
@@ -283,13 +283,13 @@ const Home = () => {
           <label>
             <p className="text-neutral-600">*markdown</p>{" "}
             <Code
-              code={`[![${data.extended42Data.login}'s 42 ${project.project.name} Score](${projectUrl}/${project.id})](https://github.com/JaeSeoKim/badge42)`}
+              code={`[![${data.extended42Data.login}'s 42 ${project.project.name} Score](${projectUrl}/${project.id})](https://42badge.vercel.app)`}
             />
           </label>
           <label>
             <p className="text-neutral-600">*html</p>{" "}
             <Code
-              code={`<a href="https://github.com/JaeSeoKim/badge42"><img src="${projectUrl}/${project.id}" alt="${data.extended42Data.login}'s 42 ${project.project.name} Score" /></a>`}
+              code={`<a href="https://42badge.vercel.app"><img src="${projectUrl}/${project.id}" alt="${data.extended42Data.login}'s 42 ${project.project.name} Score" /></a>`}
             />
           </label>
         </details>

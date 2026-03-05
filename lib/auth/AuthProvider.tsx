@@ -2,7 +2,7 @@ import axios from "axios";
 import collection from "lodash-es/collection";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import React, { PropsWithChildren, useCallback, useContext, useEffect, useState } from "react";
 import Loading from "../../components/Loading";
 import { UserType } from "../updateUserExtends42Data";
 
@@ -20,9 +20,7 @@ export const AuthContext = React.createContext<
   status: "loading",
 });
 
-export type AuthProviderProps = {};
-
-const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const { data: session } = useSession();
   const [auth, setAuth] = useState<
     | {

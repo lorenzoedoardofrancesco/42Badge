@@ -1,7 +1,7 @@
-import { FortyTwo } from "@icons-pack/react-simple-icons";
+import { Si42 } from "@icons-pack/react-simple-icons";
 import LoginButton from "./LoginButton";
 
-export type LoginButton42SchoolProps = { onClick: () => {}; disable?: boolean };
+export type LoginButton42SchoolProps = { onClick: () => void; disable?: boolean };
 
 const LoginButton42School = ({
   onClick,
@@ -12,7 +12,7 @@ const LoginButton42School = ({
       name: "42",
       background: "#00babc",
       color: "#ffffff",
-      logo: FortyTwo,
+      logo: Si42,
     }}
     disable={disable}
     onClick={onClick}

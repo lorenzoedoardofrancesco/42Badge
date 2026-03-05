@@ -1,9 +1,7 @@
-import React from "react";
+import React, { PropsWithChildren } from "react";
 import Nav from "./Nav";
 
-export type LayoutProps = {};
-
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout: React.FC<PropsWithChildren> = ({ children }) => {
   return (
     <>
       <Nav />
@@ -11,7 +9,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="flex flex-col gap-2 max-w-screen-sm mx-auto p-2 sm:p-0">
           {children}
         </div>
-        <footer>{/* TODO: 라이선스 및 연락처 작성 필요 */}</footer>
+        <footer></footer>
       </div>
     </>
   );

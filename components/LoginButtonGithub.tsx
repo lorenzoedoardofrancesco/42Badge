@@ -1,7 +1,7 @@
-import { Github } from "@icons-pack/react-simple-icons";
+import { SiGithub } from "@icons-pack/react-simple-icons";
 import LoginButton from "./LoginButton";
 
-export type LoginButtonGithubProps = { onClick: () => {}; disable?: boolean };
+export type LoginButtonGithubProps = { onClick: () => void; disable?: boolean };
 
 const LoginButtonGithub = ({ onClick, disable }: LoginButtonGithubProps) => (
   <LoginButton
@@ -9,7 +9,7 @@ const LoginButtonGithub = ({ onClick, disable }: LoginButtonGithubProps) => (
       name: "GitHub",
       background: "#2b3137",
       color: "#ffffff",
-      logo: Github,
+      logo: SiGithub,
     }}
     disable={disable}
     onClick={onClick}

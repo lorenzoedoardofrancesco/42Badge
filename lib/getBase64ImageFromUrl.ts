@@ -7,7 +7,7 @@ export const getBase64ImageFromUrl = async (url: string) =>
     })
     .then(
       (res) =>
-        `data:${res.headers["content-type"]};base64,${res.data.toString(
-          "base64"
-        )}`
+        `data:${res.headers["content-type"]};base64,${Buffer.from(
+          res.data
+        ).toString("base64")}`
     );

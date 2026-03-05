@@ -2,7 +2,7 @@ import type { NextPage } from "next";
 import LoginButtonGithub from "../../components/LoginButtonGithub";
 import LoginButton42School from "../../components/LoginButton42School";
 import { signIn, useSession } from "next-auth/react";
-import Badge42Logo from "../../components/Badge42Logo";
+import _42BadgeLogo from "../../components/42BadgeLogo";
 import { useContext, useEffect, useState } from "react";
 import Layout from "../../components/Layout";
 import Link from "next/link";
@@ -65,9 +65,7 @@ const SignInPage: NextPage = () => {
       <div className="flex flex-col gap-2">
         <div className="flex justify-center">
           <Link href={"/"}>
-            <a>
-              <Badge42Logo className="w-48 h-48 fill-black" />
-            </a>
+            <_42BadgeLogo className="w-48 h-48 fill-black" />
           </Link>
         </div>
         <h1 className="text-3xl font-bold">#Sign In</h1>

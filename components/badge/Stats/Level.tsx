@@ -1,4 +1,3 @@
-import { css, Global, keyframes } from "@emotion/react";
 import React from "react";
 
 export type LevelProps = {
@@ -12,22 +11,24 @@ const Level = ({ color, level, height }: LevelProps) => {
   const level_percentage = (parseFloat((level % 1).toFixed(2)) * 100).toFixed(
     0
   );
-
-  const expandWidth = keyframes`
-    0% { width: 0px; }
-    100% { width: ${parseInt(level_percentage) * 4.7}px; }
-  `;
+  const progressWidth = parseInt(level_percentage) * 4.7;
 
   return (
     <>
-      <Global
-        styles={css`
-          .progress_bar {
-            width: 0;
-            animation: ${expandWidth} 1s ease;
-            animation-fill-mode: forwards;
-          }
-        `}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes expandWidth {
+              0% { width: 0px; }
+              100% { width: ${progressWidth}px; }
+            }
+            .progress_bar {
+              width: 0;
+              animation: expandWidth 1s ease;
+              animation-fill-mode: forwards;
+            }
+          `,
+        }}
       />
       <rect
         className="fadeIn"

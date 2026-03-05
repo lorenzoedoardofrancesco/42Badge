@@ -1,4 +1,3 @@
-import { Icon } from "@icons-pack/react-simple-icons";
 import React from "react";
 
 export type LoginButtonProps = {
@@ -6,9 +5,9 @@ export type LoginButtonProps = {
     name: string;
     color: string;
     background: string;
-    logo?: Icon;
+    logo?: React.ComponentType<any>;
   };
-  onClick: () => {};
+  onClick: () => void;
   disable?: boolean;
 };
 
@@ -25,7 +24,7 @@ const LoginButton = ({ provider, onClick, disable }: LoginButtonProps) => {
         onClick={onClick}
         disabled={disable}
       >
-        {Logo && <Logo fontSizeAdjust={"14px"} />}
+        {Logo && <Logo size={24} />}
         <p>
           {`Sign in with `}
           {name}

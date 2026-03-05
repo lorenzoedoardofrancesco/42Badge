@@ -1,5 +1,4 @@
-import React from "react";
-import { css, keyframes, Global } from "@emotion/react";
+import React, { PropsWithChildren } from "react";
 
 export type ContainerProps = {
   color: string;
@@ -7,17 +6,12 @@ export type ContainerProps = {
   height: number;
 };
 
-const Container: React.FC<ContainerProps> = ({
+const Container: React.FC<PropsWithChildren<ContainerProps>> = ({
   children,
   color,
   cover_url,
   height,
 }) => {
-  const fadeIn = keyframes`
-    0% { opacity: 0 };
-    100% { opacity: 1 };
-  `;
-
   return (
     <svg
       width="500"
@@ -27,14 +21,20 @@ const Container: React.FC<ContainerProps> = ({
       xmlns="http://www.w3.org/2000/svg"
       xmlnsXlink="http://www.w3.org/1999/xlink"
     >
-      <Global
-        styles={css`
-          .fadeIn {
-            opacity: 0;
-            animation: ${fadeIn} 0.5s ease-in-out;
-            animation-fill-mode: forwards;
-          }
-        `}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes fadeIn {
+              0% { opacity: 0; }
+              100% { opacity: 1; }
+            }
+            .fadeIn {
+              opacity: 0;
+              animation: fadeIn 0.5s ease-in-out;
+              animation-fill-mode: forwards;
+            }
+          `,
+        }}
       />
       <g>
         <g filter="url(#container_shadow)">

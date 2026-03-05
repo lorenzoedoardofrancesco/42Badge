@@ -1,12 +1,11 @@
 datasource db {
-  provider             = "mysql"
-  url                  = env("DATABASE_URL")
-  referentialIntegrity = "prisma"
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["referentialIntegrity"]
+  provider = "prisma-client-js"
 }
 
 model Account {
@@ -19,6 +18,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -27,6 +27,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model User {
