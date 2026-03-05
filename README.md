@@ -23,7 +23,15 @@ I forked the project, brought it back to life with a full dependency upgrade, re
 
 ## 👀 Preview
 
-[![lsimanic's 42 stats](https://42badge.vercel.app/api/v2/stats)](https://42badge.vercel.app)
+[![lsimanic's 42 stats](https://42badge.vercel.app/api/v2/cmmdrgqgb0000lmzlzuxh3798/stats?cursusId=21&coalitionId=undefined)](https://42badge.vercel.app)
+<br>
+[![lsimanic's 42 stats](https://42badge.vercel.app/api/v2/cmmdrgqgb0000lmzlzuxh3798/stats?cursusId=9&coalitionId=piscine)](https://42badge.vercel.app)
+
+| Project | Score |
+|---------|-------|
+| **kfs-4**             | [![lsimanic's 42 kfs-4 Score](https://42badge.vercel.app/api/v2/cmmdrgqgb0000lmzlzuxh3798/project/3480663)](https://projects.intra.42.fr/projects/42cursus-kfs-4/projects_users/3480663) |
+| **ft_traceroute**     | [![lsimanic's 42 ft_traceroute Score](https://42badge.vercel.app/api/v2/cmmdrgqgb0000lmzlzuxh3798/project/3684239)](https://projects.intra.42.fr/projects/42cursus-ft_traceroute/projects_users/3684239) |
+| **C Piscine Rush 00** | [![lsimanic's 42 C Piscine Rush 00 Score](https://42badge.vercel.app/api/v2/cmmdrgqgb0000lmzlzuxh3798/project/2787028)](https://projects.intra.42.fr/projects/c-piscine-rush-00/projects_users/2787028) |
 
 ## ✨ Features
 
