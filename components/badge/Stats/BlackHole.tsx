@@ -40,20 +40,20 @@ const InfoBox = ({
     <rect
       className="fadeIn"
       style={{ animationDelay: "1.0s" }}
-      x="328"
-      y="71"
-      width="150"
-      height="48"
+      x="335"
+      y="105"
+      width="140"
+      height="44"
       rx="8"
       fill="#161b22"
     />
     <rect
       className="fadeIn"
       style={{ animationDelay: "1.0s" }}
-      x="328"
-      y="71"
-      width="150"
-      height="48"
+      x="335"
+      y="105"
+      width="140"
+      height="44"
       rx="8"
       stroke="#30363d"
       strokeWidth="1"
@@ -73,7 +73,7 @@ const InfoBox = ({
       letterSpacing="0em"
       textAnchor="middle"
     >
-      <tspan x="403" y="90">
+      <tspan x="405" y="123">
         {title}
       </tspan>
     </text>
@@ -91,7 +91,7 @@ const InfoBox = ({
       letterSpacing="0em"
       textAnchor="middle"
     >
-      <tspan x="403" y="108">
+      <tspan x="405" y="137">
         {value}
       </tspan>
     </text>
@@ -139,7 +139,7 @@ const BlackHole = ({ data, color }: BlackHoleProps) => {
       <InfoBox
         titleColor={color}
         title={isPisciner ? "Piscine period" : "Student period"}
-        value={`${beginDate} ~ ${endDate}`}
+        value={`${beginDate} | ${endDate}`}
       />
     );
   }

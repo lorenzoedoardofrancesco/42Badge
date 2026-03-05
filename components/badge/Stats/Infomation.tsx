@@ -5,14 +5,15 @@ export type InfomationProps = {
   color: string;
   hasProfileImage?: boolean;
   startY?: number;
+  distance?: number;
 };
 
-const Infomation = ({ data, color, hasProfileImage, startY: startYProp }: InfomationProps) => {
+const Infomation = ({ data, color, hasProfileImage, startY: startYProp, distance: distanceProp }: InfomationProps) => {
   const startY = startYProp ?? 88;
   const startDelay = 0.4;
-  const distance = 22;
-  const labelX = hasProfileImage ? 100 : 25;
-  const valueX = hasProfileImage ? 170 : 95;
+  const distance = distanceProp ?? 22;
+  const labelX = hasProfileImage ? 105 : 25;
+  const valueX = hasProfileImage ? 158 : 95;
 
   return (
     <>

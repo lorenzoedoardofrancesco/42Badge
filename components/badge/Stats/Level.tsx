@@ -12,9 +12,31 @@ const Level = ({ color, level, height }: LevelProps) => {
     0
   );
   const progressWidth = (parseInt(level_percentage) / 100) * 445;
+  const barY = height - 43;
+  const barH = 35;
 
   return (
     <>
+      <defs>
+        <linearGradient id="bar_gradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.95" />
+          <stop offset="45%" stopColor={color} stopOpacity="0.7" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.4" />
+        </linearGradient>
+        <linearGradient id="bar_gloss" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.28" />
+          <stop offset="35%" stopColor="#ffffff" stopOpacity="0.06" />
+          <stop offset="55%" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.12" />
+        </linearGradient>
+        <filter id="bar_glow">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -33,47 +55,40 @@ const Level = ({ color, level, height }: LevelProps) => {
       {/* Bar background */}
       <rect
         className="fadeIn"
-        style={{
-          animationDelay: "1.25s",
-        }}
-        x="25"
-        y={height - 40}
-        width="445"
-        height="30"
-        rx="15"
+        style={{ animationDelay: "1.25s" }}
+        x="25" y={barY} width="445" height={barH} rx="17"
         fill="#161b22"
       />
       <rect
         className="fadeIn"
-        style={{
-          animationDelay: "1.25s",
-        }}
-        x="25"
-        y={height - 40}
-        width="445"
-        height="30"
-        rx="15"
-        stroke="#30363d"
-        strokeWidth="1"
-        fill="none"
+        style={{ animationDelay: "1.25s" }}
+        x="25" y={barY} width="445" height={barH} rx="17"
+        stroke="#30363d" strokeWidth="1" fill="none"
       />
-      {/* Bar fill */}
+      {/* Glow behind fill */}
       <rect
         className="progress_bar"
-        style={{
-          animationDelay: "1.5s",
-        }}
-        x="25"
-        y={height - 40}
-        width="445"
-        height="30"
-        rx="15"
-        fill={color}
-        fillOpacity="0.6"
+        style={{ animationDelay: "1.5s" }}
+        x="25" y={barY} width="445" height={barH} rx="17"
+        fill={color} fillOpacity="0.25" filter="url(#bar_glow)"
+      />
+      {/* 3D gradient fill */}
+      <rect
+        className="progress_bar"
+        style={{ animationDelay: "1.5s" }}
+        x="25" y={barY} width="445" height={barH} rx="17"
+        fill="url(#bar_gradient)"
+      />
+      {/* Gloss highlight */}
+      <rect
+        className="progress_bar"
+        style={{ animationDelay: "1.5s" }}
+        x="25" y={barY} width="445" height={barH} rx="17"
+        fill="url(#bar_gloss)"
       />
       {/* Level text */}
       <text
-        fill="#e6edf3"
+        fill="#ffffff"
         xmlSpace="preserve"
         className="fadeIn"
         style={{
@@ -81,13 +96,13 @@ const Level = ({ color, level, height }: LevelProps) => {
           whiteSpace: "nowrap",
         }}
         fontFamily="'Segoe UI', Ubuntu, 'Helvetica Neue', Arial, sans-serif"
-        fontSize="12"
-        fontWeight="600"
-        letterSpacing="0em"
+        fontSize="13"
+        fontWeight="700"
+        letterSpacing="0.5px"
         textAnchor="middle"
       >
-        <tspan x="247" y={height - 20}>
-          level {level_integer} - {level_percentage}%
+        <tspan x="247" y={height - 21}>
+          level {level_integer} — {level_percentage}%
         </tspan>
       </text>
     </>

@@ -26,7 +26,7 @@ const StatsWrapper = ({ data }: StatsProps) => {
     <div
       style={{
         width: "500px",
-        height: "200px",
+        height: "245px",
       }}
     >
       {isShow && <Stats data={data} />}

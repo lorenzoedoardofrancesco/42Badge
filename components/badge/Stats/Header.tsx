@@ -12,6 +12,7 @@ const UNDEFINED_COLOR = "#e0e0e0";
 const Header = ({ color, login, campus, cursus }: HeaderProps) => {
   const isDefault = color === UNDEFINED_COLOR;
   const logoFill = isDefault ? "white" : color;
+  const logoGradientId = "logo_chrome";
 
   return (
     <>
@@ -63,12 +64,24 @@ const Header = ({ color, login, campus, cursus }: HeaderProps) => {
           </tspan>
         </text>
       </g>
-      {/* 42 logo top-right */}
+      {/* 42 logo top-right — chrome shine */}
+      <defs>
+        <linearGradient id={logoGradientId}
+          gradientUnits="userSpaceOnUse" x1="0" y1="17" x2="0" y2="49">
+          <stop offset="0%" stopColor={logoFill} stopOpacity="0.4" />
+          <stop offset="30%" stopColor={logoFill} stopOpacity="1" />
+          <stop offset="48%" stopColor={isDefault ? "#ffffff" : logoFill} stopOpacity={isDefault ? "0.95" : "1"} />
+          <stop offset="52%" stopColor="#ffffff" stopOpacity={isDefault ? "0.9" : "0.2"} />
+          <stop offset="70%" stopColor={logoFill} stopOpacity="1" />
+          <stop offset="100%" stopColor={logoFill} stopOpacity="0.3" />
+        </linearGradient>
+      </defs>
       <g
         className="fadeIn"
         style={{
           animationDelay: "0.5s",
         }}
+        transform="translate(-18, 8)"
       >
         {isDefault && (
           <g filter="url(#shadow)">
@@ -88,14 +101,14 @@ const Header = ({ color, login, campus, cursus }: HeaderProps) => {
         )}
         <path
           d="M442 38.7359H457.473V46.4891H465.194V32.4781H449.748L465.194 17H457.473L442 32.4781V38.7359Z"
-          fill={logoFill}
+          fill={isDefault ? `url(#${logoGradientId})` : logoFill}
         />
-        <path d="M468.527 24.7484L476.252 17H468.527V24.7484Z" fill={logoFill} />
+        <path d="M468.527 24.7484L476.252 17H468.527V24.7484Z" fill={isDefault ? `url(#${logoGradientId})` : logoFill} />
         <path
           d="M476.252 24.7484L468.527 32.4781V40.2031H476.252V32.4781L484 24.7484V17H476.252V24.7484Z"
-          fill={logoFill}
+          fill={isDefault ? `url(#${logoGradientId})` : logoFill}
         />
-        <path d="M484 32.4781L476.252 40.2031H484V32.4781Z" fill={logoFill} />
+        <path d="M484 32.4781L476.252 40.2031H484V32.4781Z" fill={isDefault ? `url(#${logoGradientId})` : logoFill} />
       </g>
     </>
   );

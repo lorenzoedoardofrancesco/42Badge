@@ -29,16 +29,17 @@ const Stats = ({ data }: StatsProps) => {
     ["Grade", data.grade],
   ].filter(Boolean) as [string, string][];
 
-  const baseHeight = 190 - (infoRows.length < 3 ? 25 : 0);
-  const height = data.profileImage ? Math.max(baseHeight, 190) : baseHeight;
+  // ~75% of credit card ratio
+  const height = 227;
 
-  // Center the avatar vertically in the content area (between header and level bar)
-  const contentTop = 65;
-  const contentBottom = height - 45;
-  const infoCenterY = (contentTop + contentBottom) / 2;
-  const avatarR = 30;
+  const contentTop = 75;
+  const contentBottom = height - 48; // 179
+  const infoCenterY = (contentTop + contentBottom) / 2; // 127
+  const infoStartY = infoCenterY - ((infoRows.length - 1) * 24) / 2;
+
+  const avatarR = 35;
   const avatarCx = 55;
-  const avatarCy = infoCenterY;
+  const avatarCy = infoCenterY - 3;
 
   return (
     <Container height={height} color={data.color}>
@@ -49,18 +50,18 @@ const Stats = ({ data }: StatsProps) => {
         login={data.login}
       />
       {data.profileImage && (
-        <g>
+        <g className="fadeIn" style={{ animationDelay: "0.5s" }}>
           <defs>
             <clipPath id="avatar_clip">
-              <circle cx={avatarCx} cy={avatarCy} r={avatarR - 1} />
+              <circle cx={avatarCx} cy={avatarCy} r={avatarR} />
             </clipPath>
           </defs>
           <circle
             cx={avatarCx}
             cy={avatarCy}
-            r={avatarR + 1}
+            r={avatarR + 1.5}
             stroke={data.color}
-            strokeWidth="2"
+            strokeWidth="1.5"
             fill="none"
           />
           <image
@@ -77,7 +78,8 @@ const Stats = ({ data }: StatsProps) => {
       <Infomation
         color={data.color}
         hasProfileImage={!!data.profileImage}
-        startY={data.profileImage ? infoCenterY - ((infoRows.length - 1) * 22) / 2 : undefined}
+        startY={infoStartY}
+        distance={24}
         data={infoRows}
       />
       <BlackHole
