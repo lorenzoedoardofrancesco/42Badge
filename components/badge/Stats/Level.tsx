@@ -95,14 +95,14 @@ const Level = ({ color, level, height }: LevelProps) => {
           animationDelay: "1.5s",
           whiteSpace: "nowrap",
         }}
-        fontFamily="'Segoe UI', Ubuntu, 'Helvetica Neue', Arial, sans-serif"
+        fontFamily="'Futura LT', sans-serif"
         fontSize="13"
         fontWeight="700"
         letterSpacing="0.5px"
         textAnchor="middle"
       >
         <tspan x="247" y={height - 21}>
-          level {level_integer} — {level_percentage}%
+          level {level_integer} - {level_percentage}%
         </tspan>
       </text>
     </>

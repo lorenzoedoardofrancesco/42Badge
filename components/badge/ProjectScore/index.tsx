@@ -13,10 +13,12 @@
 import React from "react";
 import { ProjectUser } from "../../../lib/api/42api";
 import calculateStringWidth from "../../../lib/calculateStringWidth";
+import { fontFaceStyle } from "../../../lib/fontBase64";
 import Icon from "./Icon";
 
 const ICONSWIDTH = 300;
 const PADDING = 50;
+const LEFT_PADDING = 50;
 
 interface Props {
   data: ProjectUser;
@@ -26,18 +28,19 @@ const ProjectScore: React.FC<Props> = ({ data }) => {
   const type =
     data["validated?"] != null
       ? data["validated?"] == true
-        ? "Success"
-        : "Fail"
-      : "Subscribed";
+        ? "success"
+        : "fail"
+      : "subscribed";
 
   const color =
     data["validated?"] != null
       ? data["validated?"] == true
-        ? "#5CB95B"
-        : "#D7636F"
-      : "#00BABB";
+        ? "#5CB85C"
+        : "#D8636F"
+      : "#00BABC";
 
   const width =
+    LEFT_PADDING +
     ICONSWIDTH +
     PADDING * 2 +
     calculateStringWidth(type, 120) +
@@ -53,16 +56,21 @@ const ProjectScore: React.FC<Props> = ({ data }) => {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
+      <defs>
+        <style dangerouslySetInnerHTML={{ __html: fontFaceStyle }} />
+      </defs>
       <rect width={width} height="280" rx="1" fill={color} />
-      <Icon type={type} />
+      <g transform={`translate(${LEFT_PADDING}, 0)`}>
+        <Icon type={type} />
+      </g>
       <g
         fill="#fff"
         textAnchor="start"
-        fontFamily="Verdana,DejaVu Sans,sans-serif"
-        fontSize="120"
+        fontFamily="'Futura LT', sans-serif"
+        fontSize="150"
       >
         <text
-          x={ICONSWIDTH}
+          x={LEFT_PADDING + ICONSWIDTH}
           y="200"
           textLength={calculateStringWidth(type, 120)}
           data-testid={"type"}
@@ -75,12 +83,11 @@ const ProjectScore: React.FC<Props> = ({ data }) => {
           <g
             fill="#fff"
             textAnchor="start"
-            fontFamily="Verdana,DejaVu Sans,sans-serif"
+            fontFamily="'Futura LT', sans-serif"
             fontSize="200"
-            fontStyle="italic"
           >
             <text
-              x={ICONSWIDTH + calculateStringWidth(type, 120) + PADDING}
+              x={LEFT_PADDING + ICONSWIDTH + calculateStringWidth(type, 120) + PADDING}
               y="210"
               textLength={calculateStringWidth(data.final_mark.toString(), 200)}
               data-testid={"final_mark"}
@@ -91,11 +98,12 @@ const ProjectScore: React.FC<Props> = ({ data }) => {
           <g
             fill="#fff"
             textAnchor="start"
-            fontFamily="Verdana,DejaVu Sans,sans-serif"
+            fontFamily="'Futura LT', sans-serif"
             fontSize="80"
           >
             <text
               x={
+                LEFT_PADDING +
                 ICONSWIDTH +
                 calculateStringWidth(type, 120) +
                 PADDING +

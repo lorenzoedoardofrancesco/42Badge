@@ -13,7 +13,7 @@
 import React from "react";
 
 interface Props {
-  type: "Success" | "Subscribed" | "Fail";
+  type: "success" | "subscribed" | "fail";
 }
 
 const Icon: React.FC<Props> = ({ type }) => {
@@ -21,19 +21,30 @@ const Icon: React.FC<Props> = ({ type }) => {
     <svg
       width="280"
       height="280"
-      viewBox="0 0 28 28"
+      viewBox="-70 -70 654 654"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {type == "Subscribed" && (
-        <path d="M16 2.5L7.5 13.5H20L10 25" stroke="white" strokeWidth="5" />
-      )}
-      {type == "Success" && (
-        <path d="M4 15L11.5 22L24 7" stroke="white" strokeWidth="5" />
-      )}
-      {type == "Fail" && (
-        <path d="M5 5L24 24M23.5682 5L5 24" stroke="white" strokeWidth="5" />
-      )}
+      <g transform="translate(0, 514) scale(1, -1)">
+        {type == "subscribed" && (
+          <path
+            d="M 434 303 C 436 300 436 296 434 294 L 218 3 C 217 1 214 0 212 0 C 210 0 209 0 208 1 C 204 2 202 7 203 10 L 244 188 L 82 188 C 79 188 76 189 75 192 C 73 195 74 199 75 201 L 291 508 C 293 512 297 513 301 511 C 305 510 307 506 306 502 L 265 307 L 427 307 C 430 307 433 305 434 303 Z"
+            fill="white"
+          />
+        )}
+        {type == "success" && (
+          <path
+            d="M 510 397 C 511 395 512 393 512 390 C 512 388 511 386 510 384 L 165 40 C 164 38 161 38 159 38 C 157 38 155 38 153 40 L 3 191 C -1 194 -1 200 3 203 L 78 278 C 81 282 87 282 90 278 L 159 209 L 422 472 C 425 475 431 475 434 472 Z"
+            fill="white"
+          />
+        )}
+        {type == "fail" && (
+          <path
+            d="M 280 256 L 507 29 C 514 22 514 12 507 5 C 504 2 499 0 495 0 C 491 0 486 2 483 5 L 256 232 L 29 5 C 26 2 21 0 17 0 C 13 0 8 2 5 5 C -2 12 -2 22 5 29 L 232 256 L 5 483 C -2 490 -2 500 5 507 C 12 514 22 514 29 507 L 256 280 L 483 507 C 490 514 500 514 507 507 C 514 500 514 490 507 483 Z"
+            fill="white"
+          />
+        )}
+      </g>
     </svg>
   );
 };

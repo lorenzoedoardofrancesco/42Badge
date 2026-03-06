@@ -30,7 +30,7 @@ const Header = ({ color, login, campus, cursus }: HeaderProps) => {
           style={{
             whiteSpace: "nowrap",
           }}
-          fontFamily="'Segoe UI', Ubuntu, 'Helvetica Neue', Arial, sans-serif"
+          fontFamily="'Futura LT', sans-serif"
           fontSize="18"
           fontWeight="600"
           letterSpacing="0em"
@@ -54,7 +54,7 @@ const Header = ({ color, login, campus, cursus }: HeaderProps) => {
           style={{
             whiteSpace: "nowrap",
           }}
-          fontFamily="'Segoe UI', Ubuntu, 'Helvetica Neue', Arial, sans-serif"
+          fontFamily="'Futura LT', sans-serif"
           fontSize="13"
           fontWeight="400"
           letterSpacing="0em"

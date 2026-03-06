@@ -1,4 +1,5 @@
 import React, { PropsWithChildren } from "react";
+import { fontFaceStyle } from "../../../lib/fontBase64";
 
 export type ContainerProps = {
   color: string;
@@ -66,6 +67,7 @@ const Container: React.FC<PropsWithChildren<ContainerProps>> = ({
       <style
         dangerouslySetInnerHTML={{
           __html: `
+            ${fontFaceStyle}
             @keyframes fadeIn {
               0% { opacity: 0; }
               100% { opacity: 1; }
