@@ -342,13 +342,13 @@ const Home = () => {
                 <label>
                   <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Markdown</span>
                   <Code
-                    code={`[![${data.extended42Data.login}'s 42 ${project.project.name} Score](${projectUrl}/${project.id})](https://42badge.vercel.app)`}
+                    code={`[![${data.extended42Data.login}'s 42 ${project.project.name} Score](${projectUrl}/${project.id})](https://projects.intra.42.fr/projects/${project.project.slug}/projects_users/${project.id})`}
                   />
                 </label>
                 <label>
                   <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">HTML</span>
                   <Code
-                    code={`<a href="https://42badge.vercel.app"><img src="${projectUrl}/${project.id}" alt="${data.extended42Data.login}'s 42 ${project.project.name} Score" /></a>`}
+                    code={`<a href="https://projects.intra.42.fr/projects/${project.project.slug}/projects_users/${project.id}"><img src="${projectUrl}/${project.id}" alt="${data.extended42Data.login}'s 42 ${project.project.name} Score" /></a>`}
                   />
                 </label>
               </div>
