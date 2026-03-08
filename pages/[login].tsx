@@ -123,12 +123,14 @@ function tokens(dark: boolean) {
 
 function StatPill({
   label,
+  shortLabel,
   value,
   sub,
   accent,
   t,
 }: {
   label: string;
+  shortLabel?: string;
   value: string;
   sub: string;
   accent: string;
@@ -136,20 +138,21 @@ function StatPill({
 }) {
   return (
     <div
-      className="flex-1 min-w-[90px] rounded-xl px-4 py-3 border"
+      className="flex-1 basis-0 min-w-0 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 border overflow-hidden"
       style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
     >
       <div
-        className="text-xs uppercase tracking-widest mb-1"
+        className="text-[10px] sm:text-xs uppercase tracking-widest mb-1 truncate"
         style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
       >
-        {label}
+        <span className="sm:hidden">{shortLabel ?? label}</span>
+        <span className="hidden sm:inline">{label}</span>
       </div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-2xl font-bold leading-none" style={{ color: accent, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 700 }}>
+      <div className="flex items-baseline gap-1">
+        <span className="text-lg sm:text-2xl font-bold leading-none" style={{ color: accent, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 700 }}>
           {value}
         </span>
-        <span className="text-sm" style={{ color: t.textMuted }}>
+        <span className="text-xs sm:text-sm" style={{ color: t.textMuted }}>
           {sub}
         </span>
       </div>
@@ -323,17 +326,17 @@ export default function CVPage({
           className="border-b"
           style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg }}
         >
-          <div className="max-w-6xl mx-auto px-6 pt-8 pb-7">
-            {/* Theme toggle */}
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 sm:pt-8 pb-7 relative">
+            {/* Theme toggle - floated top-right */}
             <button
               onClick={toggleTheme}
-              className="absolute top-4 right-6 flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors"
+              className="absolute top-5 sm:top-8 right-4 sm:right-6 z-10 flex items-center gap-1.5 px-2 py-1.5 sm:px-3 rounded-md border text-xs font-medium transition-colors"
               style={{ borderColor: t.cardBorder, backgroundColor: t.bg, color: t.textSub }}
             >
               {dark ? (
-                <><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7zm0-5a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm0 16a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1zm8.66-10a1 1 0 0 1-.5 1.73l-1.73 1a1 1 0 0 1-1-1.73l1.73-1a1 1 0 0 1 1.5.99zM5.57 17.27a1 1 0 0 1-.5 1.73l-1.73 1a1 1 0 1 1-1-1.73l1.73-1a1 1 0 0 1 1.5-.99zM21 12a1 1 0 0 1-1 1h-2a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1zM5 12a1 1 0 0 1-1 1H2a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1zm14.43 5.27l1.73 1a1 1 0 1 1-1 1.73l-1.73-1a1 1 0 0 1 1-1.73zM4.57 5.27l-1.73-1a1 1 0 0 1 1-1.73l1.73 1a1 1 0 0 1-1 1.73z" /></svg>Light</>
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7zm0-5a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm0 16a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1zm8.66-10a1 1 0 0 1-.5 1.73l-1.73 1a1 1 0 0 1-1-1.73l1.73-1a1 1 0 0 1 1.5.99zM5.57 17.27a1 1 0 0 1-.5 1.73l-1.73 1a1 1 0 1 1-1-1.73l1.73-1a1 1 0 0 1 1.5-.99zM21 12a1 1 0 0 1-1 1h-2a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1zM5 12a1 1 0 0 1-1 1H2a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1zm14.43 5.27l1.73 1a1 1 0 1 1-1 1.73l-1.73-1a1 1 0 0 1 1-1.73zM4.57 5.27l-1.73-1a1 1 0 0 1 1-1.73l1.73 1a1 1 0 0 1-1 1.73z" /></svg><span className="hidden sm:inline">Light</span></>
               ) : (
-                <><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" /></svg>Dark</>
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" /></svg><span className="hidden sm:inline">Dark</span></>
               )}
             </button>
 
@@ -351,7 +354,7 @@ export default function CVPage({
               {/* Identity */}
               <div className="flex-1 min-w-0 pb-1">
                 <h1
-                  className="text-4xl sm:text-5xl font-bold tracking-tight leading-none"
+                  className="text-3xl sm:text-5xl font-bold tracking-tight leading-none"
                   style={{ fontFamily: "'HelveticaNeue', sans-serif", color: t.text }}
                 >
                   {profile.displayname ?? profile.login}
@@ -442,22 +445,25 @@ export default function CVPage({
               </div>
             </div>
 
-            {/* Stat strip + level bar in one row */}
+            {/* Stat strip + level bar */}
             <div className="flex flex-wrap items-end gap-3 mt-6">
               <StatPill label="Level" value={`${lvlInt}`} sub={`${lvlPct}%`} accent={accent} t={t} />
               <StatPill label="Projects" value={`${validatedProjects.length}`} sub="validated" accent={accent} t={t} />
               {activeCursus?.begin_at && (
                 <StatPill
                   label="Student since"
+                  shortLabel="Since"
                   value={new Date(activeCursus.begin_at).toLocaleDateString("en", { month: "short" })}
                   sub={new Date(activeCursus.begin_at).toLocaleDateString("en", { year: "numeric" })}
                   accent={accent}
                   t={t}
                 />
               )}
+            </div>
 
-              {/* Level bar */}
-              <div className="flex-1 min-w-[180px] self-stretch flex flex-col justify-end pb-3 pl-1">
+            {/* Level bar */}
+            <div className="mt-3">
+              <div className="flex flex-col justify-end pl-1">
                 <div className="flex justify-between text-xs mb-1" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
                   <span style={{ color: accent }}>lvl {lvlInt}</span>
                   <span>{lvlPct}% → {lvlInt + 1}</span>
@@ -475,10 +481,10 @@ export default function CVPage({
         </header>
 
         {/* ── MAIN CONTENT ──────────────────────────────────────────── */}
-        <main className="max-w-6xl mx-auto px-6 py-10 space-y-10">
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-10">
           <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8">
           {/* LEFT: Skills + Achievements */}
-          <aside className="space-y-5">
+          <aside className="space-y-5 order-2 lg:order-1">
             {skills.length > 0 && (
               <div
                 className="rounded-xl p-6 border"
@@ -563,7 +569,7 @@ export default function CVPage({
           </aside>
 
           {/* RIGHT: Projects */}
-          <section>
+          <section className="order-1 lg:order-2">
             <h2
               className="text-2xl font-bold mb-5"
               style={{ fontFamily: "'HelveticaNeue', sans-serif", color: t.text, letterSpacing: "0.02em" }}
@@ -596,14 +602,14 @@ export default function CVPage({
                     >
                       {/* Main row */}
                       <div
-                        className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors select-none"
+                        className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4 cursor-pointer transition-colors select-none"
                         onClick={() => toggleProject(project)}
                         style={{ backgroundColor: isExpanded ? `${accent}08` : "transparent" }}
                       >
                         {/* Score badge */}
                         <div className="shrink-0">
                           <span
-                            className="text-base px-3 py-1.5 rounded-lg border inline-block min-w-[58px] text-center"
+                            className="text-sm sm:text-base px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border inline-block min-w-[48px] sm:min-w-[58px] text-center"
                             style={{
                               color: tColors.color,
                               backgroundColor: tColors.bg,
@@ -617,31 +623,67 @@ export default function CVPage({
                         </div>
 
                         {/* Name + date */}
-                        <div className="flex-1 min-w-0 flex items-center gap-2">
-                          <span
-                            className="font-bold text-[15px] uppercase tracking-wide"
-                            style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif", letterSpacing: "0.08em" }}
-                          >
-                            {project.name}
-                          </span>
-                          {project.markedAt && (
-                            <span className="text-xs" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
-                              {new Date(project.markedAt).toLocaleDateString("en", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="font-bold text-[13px] sm:text-[15px] uppercase tracking-wide truncate"
+                              style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif", letterSpacing: "0.08em" }}
+                            >
+                              {project.name}
                             </span>
-                          )}
+                            {project.markedAt && (
+                              <span className="hidden sm:inline text-xs shrink-0" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                                {new Date(project.markedAt).toLocaleDateString("en", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex sm:hidden items-center gap-2 mt-0.5">
+                            {project.markedAt && (
+                              <span className="text-[11px]" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                                {new Date(project.markedAt).toLocaleDateString("en", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                            )}
+                            {/* Stars (mobile only - inline with date) */}
+                            {showOutstandingVotes && (() => {
+                              const total = correctionNumbers[project.slug] ?? null;
+                              const outstanding = stat?.outstandingCount ?? 0;
+                              if (!total) return null;
+                              return (
+                                <div className="flex sm:hidden items-center gap-0.5">
+                                  {Array.from({ length: total }).map((_, i) => (
+                                    <svg
+                                      key={i}
+                                      width="12"
+                                      height="12"
+                                      viewBox="0 0 24 24"
+                                      fill={i < outstanding ? "#eab308" : "none"}
+                                      stroke={i < outstanding ? "#eab308" : t.textMuted}
+                                      strokeWidth="1.5"
+                                    >
+                                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                    </svg>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
 
-                        {/* Stars: total = correctionNumber from project cache, yellow = outstanding */}
+                        {/* Stars (desktop only - on the right) */}
                         {showOutstandingVotes && (() => {
                           const total = correctionNumbers[project.slug] ?? null;
                           const outstanding = stat?.outstandingCount ?? 0;
                           if (!total) return null;
                           return (
-                            <div className="flex items-center gap-0.5 shrink-0">
+                            <div className="hidden sm:flex items-center gap-0.5 shrink-0">
                               {Array.from({ length: total }).map((_, i) => (
                                 <svg
                                   key={i}
@@ -660,7 +702,7 @@ export default function CVPage({
                         })()}
 
                         {/* Right side: expand chevron + intra link */}
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                           {/* Chevron */}
                           <svg
                             width="14"
@@ -686,7 +728,7 @@ export default function CVPage({
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="flex items-center justify-center w-8 h-8 rounded-full border transition-colors shrink-0"
+                            className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-colors shrink-0"
                             style={{
                               borderColor: `${accent}40`,
                               backgroundColor: `${accent}10`,
@@ -694,8 +736,8 @@ export default function CVPage({
                             title="View on 42 Intra"
                           >
                             <svg
-                              width="16"
-                              height="16"
+                              width="14"
+                              height="14"
                               viewBox="442 17 44 30"
                               fill={accent}
                               xmlns="http://www.w3.org/2000/svg"
@@ -718,7 +760,7 @@ export default function CVPage({
                         }}
                       >
                         <div
-                          className="px-5 pb-4 pt-3"
+                          className="px-3 sm:px-5 pb-4 pt-3"
                           style={{ borderTop: `1px solid ${t.cardBorder}` }}
                         >
                           {desc === "loading" ? (
