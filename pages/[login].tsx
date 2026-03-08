@@ -596,7 +596,7 @@ export default function CVPage({
       </Head>
 
       <div
-        className="min-h-screen transition-colors duration-300"
+        className="min-h-screen transition-colors duration-300 overflow-x-hidden"
         style={{ backgroundColor: t.bg, color: t.text, fontFamily: "'HelveticaNeue', sans-serif" }}
       >
         {/* ── HERO ───────────────────────────────────────────────────── */}
@@ -732,7 +732,7 @@ export default function CVPage({
 
             {/* Bio */}
             {profile.bio && (
-              <div className="mt-4 pl-3" style={{ borderLeft: `2px solid ${accent}` }}>
+              <div className="mt-4 pl-3 overflow-hidden" style={{ borderLeft: `2px solid ${accent}` }}>
                 {profile.bio.split("\n").map((line, i) => (
                   <p key={i} className="text-sm leading-relaxed italic" style={{ color: t.textSub, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300, marginTop: i > 0 ? "0.5em" : 0 }}>
                     {line || <br />}
@@ -1088,49 +1088,26 @@ export default function CVPage({
                                     </span>
                                     {project.markedAt && (
                                       <span className="hidden sm:inline text-xs shrink-0" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
-                                        {new Date(project.markedAt).toLocaleDateString("en", {
-                                          month: "short",
-                                          day: "numeric",
-                                        })}
+                                        {new Date(project.markedAt).toLocaleDateString("en", { month: "short", day: "numeric" })}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex sm:hidden items-center gap-2 mt-0.5">
-                                    {project.markedAt && (
-                                      <span className="text-[11px]" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
-                                        {new Date(project.markedAt).toLocaleDateString("en", {
-                                          month: "short",
-                                          day: "numeric",
-                                        })}
-                                      </span>
-                                    )}
-                                    {/* Stars (mobile only) */}
-                                    {showOutstandingVotes && (() => {
-                                      const total = correctionNumbers[project.slug] ?? null;
-                                      const outstanding = stat?.outstandingCount ?? 0;
-                                      if (!total) return null;
-                                      return (
-                                        <div className="flex sm:hidden items-center gap-0.5">
-                                          {Array.from({ length: total }).map((_, i) => (
-                                            <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill={i < outstanding ? "#eab308" : "none"} stroke={i < outstanding ? "#eab308" : t.textMuted} strokeWidth="1.5">
-                                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                            </svg>
-                                          ))}
-                                        </div>
-                                      );
-                                    })()}
-                                  </div>
+                                  {project.markedAt && (
+                                    <span className="sm:hidden text-[11px]" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                                      {new Date(project.markedAt).toLocaleDateString("en", { month: "short", day: "numeric" })}
+                                    </span>
+                                  )}
                                 </div>
 
-                                {/* Stars (desktop only) */}
+                                {/* Stars */}
                                 {showOutstandingVotes && (() => {
                                   const total = correctionNumbers[project.slug] ?? null;
                                   const outstanding = stat?.outstandingCount ?? 0;
                                   if (!total) return null;
                                   return (
-                                    <div className="hidden sm:flex items-center gap-0.5 shrink-0">
+                                    <div className="flex items-center gap-0.5 shrink-0">
                                       {Array.from({ length: total }).map((_, i) => (
-                                        <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill={i < outstanding ? "#eab308" : "none"} stroke={i < outstanding ? "#eab308" : t.textMuted} strokeWidth="1.5">
+                                        <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill={i < outstanding ? "#eab308" : "none"} stroke={i < outstanding ? "#eab308" : t.textMuted} strokeWidth="1.5">
                                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                         </svg>
                                       ))}

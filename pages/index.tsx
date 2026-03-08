@@ -682,7 +682,7 @@ const Home = () => {
           {projectList.map((project) => (
             <details key={project.id} className="group">
               <summary className="cursor-pointer flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-neutral-900 transition-colors">
-                <span className="text-sm font-medium text-neutral-300 group-open:text-white">
+                <span className="flex-1 text-sm font-medium text-neutral-300 group-open:text-white">
                   {project.project.name}
                 </span>
                 <ProjectScore data={project} />
