@@ -1,7 +1,7 @@
 import { GetServerSideProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import prisma from "../db";
 import collection from "lodash-es/collection";
 import { getBase64ImageFromUrl } from "../lib/getBase64ImageFromUrl";
@@ -233,6 +233,203 @@ function SkillBar({
   );
 }
 
+// ─── Radar chart ─────────────────────────────────────────────────────────────
+
+function SkillRadar({
+  skills,
+  color,
+  t,
+}: {
+  skills: Skill[];
+  color: string;
+  t: ReturnType<typeof tokens>;
+}) {
+  const [visible, setVisible] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const radarSkills = skills.slice(0, 8);
+  const n = radarSkills.length;
+  if (n < 3) return null;
+
+  const cx = 160, cy = 160, r = 90;
+  const angleStep = (2 * Math.PI) / n;
+  const startAngle = -Math.PI / 2;
+
+  const point = (i: number, ratio: number) => ({
+    x: cx + r * ratio * Math.cos(startAngle + i * angleStep),
+    y: cy + r * ratio * Math.sin(startAngle + i * angleStep),
+  });
+
+  const guideLevels = [0.25, 0.5, 0.75, 1];
+
+  const dataPoints = radarSkills.map((s, i) => point(i, s.level / 20));
+  const dataPath = dataPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ") + " Z";
+
+  return (
+    <div>
+      <svg viewBox="0 0 320 320" className="w-full max-w-[320px] mx-auto" style={{ overflow: "visible" }}>
+        {/* Guide polygons */}
+        {guideLevels.map((level) => {
+          const pts = radarSkills.map((_, i) => point(i, level));
+          const path = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ") + " Z";
+          return (
+            <path
+              key={level}
+              d={path}
+              fill="none"
+              stroke={t.cardBorder}
+              strokeWidth={level === 1 ? 1 : 0.5}
+              opacity={0.6}
+            />
+          );
+        })}
+        {/* Axis lines */}
+        {radarSkills.map((_, i) => {
+          const end = point(i, 1);
+          return (
+            <line
+              key={i}
+              x1={cx} y1={cy} x2={end.x} y2={end.y}
+              stroke={t.cardBorder}
+              strokeWidth={0.5}
+              opacity={0.4}
+            />
+          );
+        })}
+        {/* Data polygon */}
+        <path
+          d={dataPath}
+          fill={`${color}18`}
+          stroke={color}
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "scale(1)" : "scale(0.3)",
+            transformOrigin: `${cx}px ${cy}px`,
+            transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        />
+        {/* Data points + hover targets */}
+        {dataPoints.map((p, i) => (
+          <g key={i}>
+            {/* Invisible larger hit area */}
+            <circle
+              cx={p.x} cy={p.y} r={12}
+              fill="transparent"
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              style={{ cursor: "default" }}
+            />
+            <circle
+              cx={p.x} cy={p.y}
+              r={hoveredIndex === i ? 4 : 2.5}
+              fill={color}
+              style={{
+                opacity: visible ? 1 : 0,
+                transition: `opacity 0.5s ease ${0.3 + i * 0.05}s, r 0.15s ease`,
+              }}
+            />
+          </g>
+        ))}
+        {/* Labels */}
+        {radarSkills.map((s, i) => {
+          const labelR = r + 22;
+          const angle = startAngle + i * angleStep;
+          const lx = cx + labelR * Math.cos(angle);
+          const ly = cy + labelR * Math.sin(angle);
+          const isLeft = Math.cos(angle) < -0.1;
+          const isRight = Math.cos(angle) > 0.1;
+          const isHovered = hoveredIndex === i;
+          // Abbreviate long names: keep first word, or first two if short
+          const words = s.name.split(/[\s&]+/);
+          const short = words[0].length > 10 ? words[0].slice(0, 9) + "." : words.length > 1 && words[0].length + words[1].length < 14 ? words.slice(0, 2).join(" ") : words[0];
+          return (
+            <text
+              key={s.name}
+              x={lx}
+              y={ly}
+              textAnchor={isLeft ? "end" : isRight ? "start" : "middle"}
+              dominantBaseline="central"
+              fill={isHovered ? color : t.textSub}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              style={{
+                fontSize: "9.5px",
+                fontFamily: "'HelveticaNeue', sans-serif",
+                fontWeight: isHovered ? 500 : 400,
+                cursor: "default",
+                transition: "fill 0.15s ease, font-weight 0.15s ease",
+              }}
+            >
+              {isHovered ? s.name : short}
+            </text>
+          );
+        })}
+      </svg>
+      {/* Hover tooltip */}
+      <div
+        className="text-center mt-1"
+        style={{
+          minHeight: "2em",
+          opacity: hoveredIndex !== null ? 1 : 0,
+          transition: "opacity 0.15s ease",
+        }}
+      >
+        {hoveredIndex !== null && (
+          <>
+            <span className="text-sm font-medium" style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif" }}>
+              {radarSkills[hoveredIndex].name}
+            </span>
+            <span className="text-sm ml-2 tabular-nums" style={{ color, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 500 }}>
+              {radarSkills[hoveredIndex].level.toFixed(2)}
+              <span style={{ color: t.textMuted, fontWeight: 400 }}>/20</span>
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Entrance animation ──────────────────────────────────────────────────────
+
+function FadeIn({
+  children,
+  delay = 0,
+  className = "",
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 60 + delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(12px)",
+        transition: `opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CVPage({
@@ -272,6 +469,7 @@ export default function CVPage({
     profile.cursusUsers.find((c) => !c.cursus.slug.includes("piscine")) ??
     profile.cursusUsers[profile.cursusUsers.length - 1];
 
+  const [skillView, setSkillView] = useState<"bars" | "radar">("bars");
   const [expandedProjectId, setExpandedProjectId] = useState<number | null>(null);
   const [projectDescriptions, setProjectDescriptions] = useState<Record<string, string | null | "loading">>(initialDescriptions);
   const [teamStats, setTeamStats] = useState<Record<number, TeamStat>>(initialTeamStats);
@@ -342,6 +540,27 @@ export default function CVPage({
           @font-face { font-family: 'HelveticaNeue'; src: url('/assets/fonts/helvetica-neue/HelveticaNeueRoman.otf') format('opentype'); font-weight: 400; font-style: normal; }
           @font-face { font-family: 'HelveticaNeue'; src: url('/assets/fonts/helvetica-neue/HelveticaNeueMedium.otf') format('opentype'); font-weight: 500; font-style: normal; }
           @font-face { font-family: 'HelveticaNeue'; src: url('/assets/fonts/helvetica-neue/HelveticaNeueBold.otf') format('opentype'); font-weight: 700; font-style: normal; }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            .print-break-inside-avoid { break-inside: avoid; }
+            * { transition: none !important; animation: none !important; }
+            .print-single-col { display: block !important; }
+            .print-single-col > * { width: 100% !important; max-width: 100% !important; }
+            .print-order-1 { order: 1 !important; }
+            .print-order-2 { order: 2 !important; }
+            .print-order-3 { order: 3 !important; }
+            .print-mb { margin-bottom: 1.5rem !important; }
+            .print-grid-2col { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 1rem !important; }
+            [style*="opacity"] { opacity: 1 !important; transform: none !important; }
+            header { padding-bottom: 0.5rem !important; }
+            main { padding-top: 1rem !important; padding-bottom: 0 !important; }
+            .min-h-screen { min-height: auto !important; }
+            main > div { gap: 1rem !important; }
+            .print-break-inside-avoid { break-inside: avoid; }
+            .print-project-row { break-inside: avoid; }
+            .print-year-gap > * + * { margin-top: 1rem !important; }
+          }
         `}</style>
       </Head>
 
@@ -355,10 +574,24 @@ export default function CVPage({
           style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg }}
         >
           <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 sm:pt-8 pb-7 relative">
-            {/* Theme toggle - floated top-right */}
+            {/* Top-right actions */}
+            <div className="absolute top-5 sm:top-8 right-4 sm:right-6 z-10 flex items-center gap-2 no-print">
+            <button
+              onClick={() => {
+                const prev = skillView;
+                setSkillView("bars");
+                setTimeout(() => { window.print(); setSkillView(prev); }, 50);
+              }}
+              className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 rounded-md border text-xs font-medium transition-colors"
+              style={{ borderColor: t.cardBorder, backgroundColor: t.bg, color: t.textSub }}
+              title="Print / Save as PDF"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              <span className="hidden sm:inline">PDF</span>
+            </button>
             <button
               onClick={toggleTheme}
-              className="absolute top-5 sm:top-8 right-4 sm:right-6 z-10 flex items-center gap-1.5 px-2 py-1.5 sm:px-3 rounded-md border text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 rounded-md border text-xs font-medium transition-colors"
               style={{ borderColor: t.cardBorder, backgroundColor: t.bg, color: t.textSub }}
             >
               {dark ? (
@@ -367,6 +600,7 @@ export default function CVPage({
                 <><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" /></svg><span className="hidden sm:inline">Dark</span></>
               )}
             </button>
+            </div>
 
             <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-end">
               {/* Avatar */}
@@ -510,31 +744,53 @@ export default function CVPage({
 
         {/* ── MAIN CONTENT ──────────────────────────────────────────── */}
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-10">
-          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 print-single-col">
           {/* LEFT: Skills + Achievements */}
-          <aside className="space-y-5 order-2 lg:order-1">
+          <aside className="space-y-5 order-2 lg:order-1 print-order-1 print-mb lg:sticky lg:top-6 lg:self-start">
             {skills.length > 0 && (
+              <FadeIn delay={200}>
               <div
                 className="rounded-xl p-6 border"
                 style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
               >
-                <h2
-                  className="text-xs font-bold uppercase tracking-widest mb-6"
-                  style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
-                >
-                  Skills
-                </h2>
-                <div className="space-y-5">
-                  {skills.map((skill, i) => (
-                    <SkillBar key={skill.name} skill={skill} color={accent} index={i} t={t} />
-                  ))}
+                <div className="flex items-center justify-between mb-6">
+                  <h2
+                    className="text-xs font-bold uppercase tracking-widest"
+                    style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
+                  >
+                    Skills
+                  </h2>
+                  {skills.length >= 3 && (
+                    <button
+                      onClick={() => setSkillView((v) => v === "bars" ? "radar" : "bars")}
+                      className="no-print flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] uppercase tracking-wider font-medium transition-colors"
+                      style={{ borderColor: t.cardBorder, color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
+                    >
+                      {skillView === "bars" ? (
+                        <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><line x1="22" y1="8.5" x2="12" y2="15.5"/><line x1="2" y1="8.5" x2="12" y2="15.5"/></svg>Radar</>
+                      ) : (
+                        <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Bars</>
+                      )}
+                    </button>
+                  )}
                 </div>
+                {skillView === "bars" ? (
+                  <div className="space-y-5">
+                    {skills.map((skill, i) => (
+                      <SkillBar key={skill.name} skill={skill} color={accent} index={i} t={t} />
+                    ))}
+                  </div>
+                ) : (
+                  <SkillRadar skills={skills} color={accent} t={t} />
+                )}
               </div>
+              </FadeIn>
             )}
 
             {profile.achievements.length > 0 && (
+              <FadeIn delay={350}>
               <div
-                className="rounded-xl p-6 border"
+                className="rounded-xl p-6 border print-break-inside-avoid"
                 style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
               >
                 <h2
@@ -583,9 +839,10 @@ export default function CVPage({
                   })}
                 </div>
               </div>
+              </FadeIn>
             )}
 
-            <div className="text-center pt-1">
+            <div className="text-center pt-1 no-print">
               <Link
                 href="/"
                 className="text-xs transition-colors"
@@ -597,7 +854,8 @@ export default function CVPage({
           </aside>
 
           {/* RIGHT: Projects */}
-          <section className="order-1 lg:order-2">
+          <section className="order-1 lg:order-2 print-order-2">
+            <FadeIn delay={100}>
             <h2
               className="text-2xl font-bold mb-5"
               style={{ fontFamily: "'HelveticaNeue', sans-serif", color: t.text, letterSpacing: "0.02em" }}
@@ -607,210 +865,195 @@ export default function CVPage({
                 {validatedProjects.length}
               </span>
             </h2>
+            </FadeIn>
 
             {validatedProjects.length === 0 ? (
               <p className="text-sm" style={{ color: t.textMuted }}>
                 No validated projects.
               </p>
-            ) : (
-              <div
-                className="rounded-xl border divide-y overflow-hidden"
-                style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg, boxShadow: t.cardShadow }}
-              >
-                {validatedProjects.map((project) => {
-                  const tier = scoreTier(project.finalMark, project.validated);
-                  const tColors = t.tierColors[tier];
-                  const isExpanded = expandedProjectId === project.id;
-                  const desc = projectDescriptions[project.slug];
-                  const stat = project.teamId ? teamStats[project.teamId] : null;
-                  return (
-                    <div
-                      key={project.id}
-                      style={{ borderColor: t.cardBorder }}
-                    >
-                      {/* Main row */}
+            ) : (() => {
+              // Group projects by year
+              const grouped: { year: string; projects: typeof validatedProjects }[] = [];
+              let currentYear = "";
+              for (const project of validatedProjects) {
+                const year = project.markedAt
+                  ? new Date(project.markedAt).getFullYear().toString()
+                  : "Unknown";
+                if (year !== currentYear) {
+                  currentYear = year;
+                  grouped.push({ year, projects: [] });
+                }
+                grouped[grouped.length - 1].projects.push(project);
+              }
+
+              return (
+                <div className="space-y-6 print-year-gap">
+                  {grouped.map((group, gi) => (
+                    <FadeIn key={group.year} delay={150 + gi * 80}>
+                    <div>
+                      {/* Year divider */}
+                      <div className="flex items-center gap-4 mb-3">
+                        <span
+                          className="text-sm font-bold tracking-wider"
+                          style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
+                        >
+                          {group.year}
+                        </span>
+                        <div className="flex-1 h-px" style={{ backgroundColor: t.hrColor }} />
+                        <span
+                          className="text-[11px] tabular-nums"
+                          style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}
+                        >
+                          {group.projects.length} project{group.projects.length !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+
+                      {/* Projects card for this year */}
                       <div
-                        className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4 cursor-pointer transition-colors select-none"
-                        onClick={() => toggleProject(project)}
-                        style={{ backgroundColor: isExpanded ? `${accent}08` : "transparent" }}
+                        className="rounded-xl border divide-y overflow-hidden"
+                        style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg, boxShadow: t.cardShadow }}
                       >
-                        {/* Score badge */}
-                        <div className="shrink-0">
-                          <span
-                            className="text-sm sm:text-base px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border inline-block min-w-[48px] sm:min-w-[58px] text-center"
-                            style={{
-                              color: tColors.color,
-                              backgroundColor: tColors.bg,
-                              borderColor: tColors.border,
-                              fontFamily: "'HelveticaNeue', sans-serif",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {project.finalMark ?? "—"}
-                          </span>
-                        </div>
-
-                        {/* Name + date */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="font-bold text-[13px] sm:text-[15px] uppercase tracking-wide truncate"
-                              style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif", letterSpacing: "0.08em" }}
-                            >
-                              {project.name}
-                            </span>
-                            {project.markedAt && (
-                              <span className="hidden sm:inline text-xs shrink-0" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
-                                {new Date(project.markedAt).toLocaleDateString("en", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex sm:hidden items-center gap-2 mt-0.5">
-                            {project.markedAt && (
-                              <span className="text-[11px]" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
-                                {new Date(project.markedAt).toLocaleDateString("en", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </span>
-                            )}
-                            {/* Stars (mobile only - inline with date) */}
-                            {showOutstandingVotes && (() => {
-                              const total = correctionNumbers[project.slug] ?? null;
-                              const outstanding = stat?.outstandingCount ?? 0;
-                              if (!total) return null;
-                              return (
-                                <div className="flex sm:hidden items-center gap-0.5">
-                                  {Array.from({ length: total }).map((_, i) => (
-                                    <svg
-                                      key={i}
-                                      width="12"
-                                      height="12"
-                                      viewBox="0 0 24 24"
-                                      fill={i < outstanding ? "#eab308" : "none"}
-                                      stroke={i < outstanding ? "#eab308" : t.textMuted}
-                                      strokeWidth="1.5"
-                                    >
-                                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                    </svg>
-                                  ))}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </div>
-
-                        {/* Stars (desktop only - on the right) */}
-                        {showOutstandingVotes && (() => {
-                          const total = correctionNumbers[project.slug] ?? null;
-                          const outstanding = stat?.outstandingCount ?? 0;
-                          if (!total) return null;
+                        {group.projects.map((project) => {
+                          const tier = scoreTier(project.finalMark, project.validated);
+                          const tColors = t.tierColors[tier];
+                          const isExpanded = expandedProjectId === project.id;
+                          const desc = projectDescriptions[project.slug];
+                          const stat = project.teamId ? teamStats[project.teamId] : null;
                           return (
-                            <div className="hidden sm:flex items-center gap-0.5 shrink-0">
-                              {Array.from({ length: total }).map((_, i) => (
-                                <svg
-                                  key={i}
-                                  width="14"
-                                  height="14"
-                                  viewBox="0 0 24 24"
-                                  fill={i < outstanding ? "#eab308" : "none"}
-                                  stroke={i < outstanding ? "#eab308" : t.textMuted}
-                                  strokeWidth="1.5"
-                                >
-                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                </svg>
-                              ))}
+                            <div
+                              key={project.id}
+                              className="print-project-row"
+                              style={{ borderColor: t.cardBorder }}
+                            >
+                              {/* Main row */}
+                              <div
+                                className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4 cursor-pointer transition-colors select-none"
+                                onClick={() => toggleProject(project)}
+                                style={{ backgroundColor: isExpanded ? `${accent}08` : "transparent" }}
+                              >
+                                {/* Score badge */}
+                                <div className="shrink-0">
+                                  <span
+                                    className="text-sm sm:text-base px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border inline-block min-w-[48px] sm:min-w-[58px] text-center"
+                                    style={{
+                                      color: tColors.color,
+                                      backgroundColor: tColors.bg,
+                                      borderColor: tColors.border,
+                                      fontFamily: "'HelveticaNeue', sans-serif",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {project.finalMark ?? "—"}
+                                  </span>
+                                </div>
+
+                                {/* Name + date */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className="font-bold text-[13px] sm:text-[15px] uppercase tracking-wide truncate"
+                                      style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif", letterSpacing: "0.08em" }}
+                                    >
+                                      {project.name}
+                                    </span>
+                                    {project.markedAt && (
+                                      <span className="hidden sm:inline text-xs shrink-0" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                                        {new Date(project.markedAt).toLocaleDateString("en", {
+                                          month: "short",
+                                          day: "numeric",
+                                        })}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex sm:hidden items-center gap-2 mt-0.5">
+                                    {project.markedAt && (
+                                      <span className="text-[11px]" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                                        {new Date(project.markedAt).toLocaleDateString("en", {
+                                          month: "short",
+                                          day: "numeric",
+                                        })}
+                                      </span>
+                                    )}
+                                    {/* Stars (mobile only) */}
+                                    {showOutstandingVotes && (() => {
+                                      const total = correctionNumbers[project.slug] ?? null;
+                                      const outstanding = stat?.outstandingCount ?? 0;
+                                      if (!total) return null;
+                                      return (
+                                        <div className="flex sm:hidden items-center gap-0.5">
+                                          {Array.from({ length: total }).map((_, i) => (
+                                            <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill={i < outstanding ? "#eab308" : "none"} stroke={i < outstanding ? "#eab308" : t.textMuted} strokeWidth="1.5">
+                                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                            </svg>
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+
+                                {/* Stars (desktop only) */}
+                                {showOutstandingVotes && (() => {
+                                  const total = correctionNumbers[project.slug] ?? null;
+                                  const outstanding = stat?.outstandingCount ?? 0;
+                                  if (!total) return null;
+                                  return (
+                                    <div className="hidden sm:flex items-center gap-0.5 shrink-0">
+                                      {Array.from({ length: total }).map((_, i) => (
+                                        <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill={i < outstanding ? "#eab308" : "none"} stroke={i < outstanding ? "#eab308" : t.textMuted} strokeWidth="1.5">
+                                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                        </svg>
+                                      ))}
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* Chevron + intra link */}
+                                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 no-print">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: t.textMuted, transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}>
+                                    <polyline points="6 9 12 15 18 9" />
+                                  </svg>
+                                  <a
+                                    href={`https://projects.intra.42.fr/projects/${project.slug}/projects_users/${project.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-colors shrink-0"
+                                    style={{ borderColor: `${accent}40`, backgroundColor: `${accent}10` }}
+                                    title="View on 42 Intra"
+                                  >
+                                    <svg width="14" height="14" viewBox="442 17 44 30" fill={accent} xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M442 38.7359H457.473V46.4891H465.194V32.4781H449.748L465.194 17H457.473L442 32.4781V38.7359Z" />
+                                      <path d="M468.527 24.7484L476.252 17H468.527V24.7484Z" />
+                                      <path d="M476.252 24.7484L468.527 32.4781V40.2031H476.252V32.4781L484 24.7484V17H476.252V24.7484Z" />
+                                      <path d="M484 32.4781L476.252 40.2031H484V32.4781Z" />
+                                    </svg>
+                                  </a>
+                                </div>
+                              </div>
+
+                              {/* Expanding description panel */}
+                              <div style={{ maxHeight: isExpanded ? "200px" : "0px", overflow: "hidden", transition: "max-height 0.28s ease" }}>
+                                <div className="px-3 sm:px-5 pb-4 pt-3" style={{ borderTop: `1px solid ${t.cardBorder}` }}>
+                                  {desc === "loading" ? (
+                                    <p className="text-xs italic" style={{ color: t.textMuted }}>Loading...</p>
+                                  ) : desc ? (
+                                    <p className="text-[15px] leading-relaxed" style={{ color: t.textSub }}>{desc}</p>
+                                  ) : (
+                                    <p className="text-sm italic" style={{ color: t.textMuted }}>No description available.</p>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           );
-                        })()}
-
-                        {/* Right side: expand chevron + intra link */}
-                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                          {/* Chevron */}
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            style={{
-                              color: t.textMuted,
-                              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                              transition: "transform 0.2s ease",
-                            }}
-                          >
-                            <polyline points="6 9 12 15 18 9" />
-                          </svg>
-
-                          {/* 42 intra link button */}
-                          <a
-                            href={`https://projects.intra.42.fr/projects/${project.slug}/projects_users/${project.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-colors shrink-0"
-                            style={{
-                              borderColor: `${accent}40`,
-                              backgroundColor: `${accent}10`,
-                            }}
-                            title="View on 42 Intra"
-                          >
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="442 17 44 30"
-                              fill={accent}
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path d="M442 38.7359H457.473V46.4891H465.194V32.4781H449.748L465.194 17H457.473L442 32.4781V38.7359Z" />
-                              <path d="M468.527 24.7484L476.252 17H468.527V24.7484Z" />
-                              <path d="M476.252 24.7484L468.527 32.4781V40.2031H476.252V32.4781L484 24.7484V17H476.252V24.7484Z" />
-                              <path d="M484 32.4781L476.252 40.2031H484V32.4781Z" />
-                            </svg>
-                          </a>
-                        </div>
-                      </div>
-
-                      {/* Expanding description panel */}
-                      <div
-                        style={{
-                          maxHeight: isExpanded ? "200px" : "0px",
-                          overflow: "hidden",
-                          transition: "max-height 0.28s ease",
-                        }}
-                      >
-                        <div
-                          className="px-3 sm:px-5 pb-4 pt-3"
-                          style={{ borderTop: `1px solid ${t.cardBorder}` }}
-                        >
-                          {desc === "loading" ? (
-                            <p className="text-xs italic" style={{ color: t.textMuted }}>
-                              Loading…
-                            </p>
-                          ) : desc ? (
-                            <p className="text-[15px] leading-relaxed" style={{ color: t.textSub }}>
-                              {desc}
-                            </p>
-                          ) : (
-                            <p className="text-sm italic" style={{ color: t.textMuted }}>
-                              No description available.
-                            </p>
-                          )}
-                        </div>
+                        })}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    </FadeIn>
+                  ))}
+                </div>
+              );
+            })()}
           </section>
           </div>
 
