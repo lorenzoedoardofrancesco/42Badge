@@ -294,6 +294,18 @@ const Home = () => {
   }, [selectedCursus, data.extended42Data.coalitions.length]);
 
   const statsUrl = `https://42cv.dev/api/badge/${data.id}/stats?cursusId=${cursusId}&coalitionId=${coalitionId}`;
+
+  const cvCompleteness = useMemo(() => {
+    const checks = [
+      !!bio.trim(),
+      !!githubUrl.trim(),
+      !!linkedinUrl.trim(),
+      !!address.trim(),
+      !!phone.trim(),
+      Object.values(projectGithubLinks).some((v) => !!v.trim()),
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  }, [bio, githubUrl, linkedinUrl, address, phone, projectGithubLinks]);
   const projectUrl = `https://42cv.dev/api/badge/${data.id}/project`;
 
   const projectList = useMemo(
@@ -371,6 +383,45 @@ const Home = () => {
           </label>
           {isPublicProfile && (
             <>
+              {/* CV link */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 px-3 py-2.5 bg-green-950/40 border border-green-800/50 rounded-lg">
+                  <span className="text-xs text-green-400 shrink-0">Your CV is live at</span>
+                  <a
+                    href={`https://42cv.dev/${data.extended42Data.login}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-medium text-green-300 hover:text-green-100 truncate flex-1"
+                  >
+                    https://42cv.dev/{data.extended42Data.login}
+                  </a>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://42cv.dev/${data.extended42Data.login}`);
+                    }}
+                    className="text-xs text-green-500 hover:text-green-300 shrink-0 transition-colors"
+                  >
+                    Copy
+                  </button>
+                </div>
+                {/* Completeness bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-neutral-500">CV completeness</span>
+                    <span className="text-xs text-neutral-400">{cvCompleteness}%</span>
+                  </div>
+                  <div className="h-1 w-full bg-neutral-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${cvCompleteness}%`,
+                        backgroundColor: cvCompleteness === 100 ? "#22c55e" : cvCompleteness >= 50 ? "#eab308" : "#ef4444",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Bio */}
               <div>
                 <p className="text-sm text-neutral-200 mb-1">Bio</p>
@@ -609,10 +660,6 @@ const Home = () => {
                 </div>
               )}
 
-              <div>
-                <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Your CV link</span>
-                <Code code={`https://42cv.dev/${data.extended42Data.login}`} />
-              </div>
             </>
           )}
         </div>
