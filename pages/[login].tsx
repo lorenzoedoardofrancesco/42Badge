@@ -238,7 +238,6 @@ function SkillBar({
         </span>
         <span className="text-sm tabular-nums" style={{ color, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 500 }}>
           {skill.level.toFixed(2)}
-          <span style={{ color: t.textMuted, fontWeight: 400 }}>/20</span>
         </span>
       </div>
       <div
@@ -412,8 +411,7 @@ function SkillRadar({
             </span>
             <span className="text-sm ml-2 tabular-nums" style={{ color, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 500 }}>
               {radarSkills[hoveredIndex].level.toFixed(2)}
-              <span style={{ color: t.textMuted, fontWeight: 400 }}>/20</span>
-            </span>
+                </span>
           </>
         )}
       </div>
