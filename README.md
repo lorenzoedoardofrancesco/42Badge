@@ -15,13 +15,11 @@
 
 Generate a clean, recruiter-friendly CV page at `42cv.dev/your-login`:
 
-- Full name, campus, grade, cursus, pool cohort
-- GitHub, LinkedIn, address, phone number in the header
-- Skill bars from 42 API
-- Validated projects list with scores and outstanding vote ratings
-- Achievements - you choose which ones to display
-- Light / dark mode (visitor can toggle, you set the default)
-- Helvetica Neue typography throughout
+- **42 Statistics** - student since, validated projects, outstanding votes, campus / cohort / all-time rankings and level progress, each with recruiter-facing tooltips so the numbers actually mean something
+- **Professional experience** - internships, full-time, work-study, apprenticeships; Markdown descriptions, auto-sorted by date
+- **Skill tags** - freeform categories with color-coded chips (Programming Languages, Tools, Libraries, Practices, Human Languages…); type to add, drag to reorder
+- **42 skills & achievements** - radar chart or bar view from the 42 API; curated achievement selection with difficulty tiers
+- **Selected projects** - pick your best work; scores, outstanding votes, and per-project GitHub links
 
 ### 🎴 Stats badge - embed live stats in your GitHub README
 

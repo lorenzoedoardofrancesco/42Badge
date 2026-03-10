@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Head from "next/head";
 import Layout from "../components/Layout";
 import Stats, { StatsProps } from "../components/badge/Stats";
@@ -9,6 +9,24 @@ import { useContext } from "react";
 import axios from "axios";
 import getCoalitions from "../lib/getCoalitions";
 import ProjectScore from "../components/badge/ProjectScore";
+import { WORK_EXP_SLUGS, EMPLOYMENT_TYPES, WorkExperience, getEmploymentLabel, formatDateRange } from "../lib/workExperiences";
+import { SKILL_PALETTE } from "../lib/skillPalette";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const StatsWrapper = ({ data }: StatsProps) => {
   const [isShow, setIsShow] = useState(false);
@@ -231,6 +249,461 @@ const FeedbackForm = ({ login }: { login: string }) => {
   );
 };
 
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
+const MonthYearPicker = ({
+  value,
+  onChange,
+  label,
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+  label: string;
+}) => {
+  const [localMonth, setLocalMonth] = React.useState(value ? value.split("-")[1] : "");
+  const [localYear, setLocalYear]   = React.useState(value ? value.split("-")[0] : "");
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 1990 + 1 }, (_, i) => String(currentYear - i));
+
+  const update = (month: string, year: string) => {
+    if (month && year) onChange(`${year}-${month}`);
+    else onChange(null);
+  };
+
+  return (
+    <div>
+      {label && <p className="text-xs text-neutral-400 mb-1">{label}</p>}
+      <div className="flex gap-2">
+        <select
+          value={localMonth}
+          onChange={(e) => { setLocalMonth(e.target.value); update(e.target.value, localYear); }}
+          className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-2 py-1.5 focus:outline-none focus:border-neutral-500"
+        >
+          <option value="">Month</option>
+          {MONTHS.map((m, i) => (
+            <option key={m} value={String(i + 1).padStart(2, "0")}>{m}</option>
+          ))}
+        </select>
+        <select
+          value={localYear}
+          onChange={(e) => { setLocalYear(e.target.value); update(localMonth, e.target.value); }}
+          className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-2 py-1.5 focus:outline-none focus:border-neutral-500"
+        >
+          <option value="">Year</option>
+          {years.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+};
+
+type SkillTagItem = { category: string; items: string[] };
+
+
+const TagInput = ({
+  tags,
+  onChange,
+  placeholder,
+}: {
+  tags: string[];
+  onChange: (next: string[]) => void;
+  placeholder?: string;
+}) => {
+  const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const commit = () => {
+    const trimmed = input.trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      onChange([...tags, trimmed]);
+    }
+    setInput("");
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      commit();
+    } else if (e.key === "Backspace" && input === "" && tags.length > 0) {
+      onChange(tags.slice(0, -1));
+    }
+  };
+
+  return (
+    <div
+      className="flex flex-wrap gap-1.5 min-h-[34px] w-full bg-neutral-900 border border-neutral-600 rounded px-2 py-1.5 cursor-text focus-within:border-neutral-500"
+      onClick={() => inputRef.current?.focus()}
+    >
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-700 text-neutral-200 text-xs"
+        >
+          {tag}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onChange(tags.filter((t) => t !== tag)); }}
+            className="text-neutral-500 hover:text-neutral-200 leading-none"
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      <input
+        ref={inputRef}
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={onKeyDown}
+        onBlur={commit}
+        placeholder={tags.length === 0 ? placeholder : ""}
+        className="flex-1 min-w-[80px] bg-transparent text-xs text-neutral-200 outline-none placeholder:text-neutral-600"
+      />
+    </div>
+  );
+};
+
+const SortableSkillRow = ({
+  id,
+  tag,
+  index,
+  editing,
+  formJsx,
+  onEdit,
+  onRemove,
+}: {
+  id: string;
+  tag: SkillTagItem;
+  index: number;
+  editing: boolean;
+  formJsx: React.ReactNode;
+  onEdit: () => void;
+  onRemove: () => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const c = SKILL_PALETTE[index % SKILL_PALETTE.length];
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+      className="flex items-start gap-2 px-3 py-2.5 bg-neutral-800 border border-neutral-700 rounded-md"
+    >
+      {editing ? (
+        <div className="flex-1">{formJsx}</div>
+      ) : (
+        <>
+          <button
+            {...attributes}
+            {...listeners}
+            className="shrink-0 mt-0.5 text-neutral-600 hover:text-neutral-400 cursor-grab active:cursor-grabbing touch-none"
+            aria-label="Drag to reorder"
+          >
+            <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor">
+              <circle cx="4" cy="3" r="1.5"/><circle cx="8" cy="3" r="1.5"/>
+              <circle cx="4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/>
+              <circle cx="4" cy="13" r="1.5"/><circle cx="8" cy="13" r="1.5"/>
+            </svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: c.text }}>{tag.category}</div>
+            <div className="flex flex-wrap gap-1.5">
+              {tag.items.map((item) => (
+                <span key={item} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}>
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+          <button onClick={onEdit} className="text-xs text-neutral-500 hover:text-neutral-300 shrink-0 transition-colors">Edit</button>
+          <button onClick={onRemove} className="text-xs text-neutral-600 hover:text-red-400 shrink-0 transition-colors">Delete</button>
+        </>
+      )}
+    </div>
+  );
+};
+
+const SkillTagsEditor = ({
+  value,
+  onChange,
+}: {
+  value: SkillTagItem[];
+  onChange: (next: SkillTagItem[]) => void;
+}) => {
+  const [editing, setEditing] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [formCategory, setFormCategory] = useState("");
+  const [formItems, setFormItems] = useState<string[]>([]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
+
+  const openAdd = () => {
+    setEditing(null);
+    setFormCategory("");
+    setFormItems([]);
+    setAdding(true);
+  };
+
+  const openEdit = (i: number) => {
+    setAdding(false);
+    setFormCategory(value[i].category);
+    setFormItems(value[i].items);
+    setEditing(i);
+  };
+
+  const cancelForm = () => {
+    setAdding(false);
+    setEditing(null);
+    setFormCategory("");
+    setFormItems([]);
+  };
+
+  const saveForm = () => {
+    if (!formCategory.trim()) return;
+    const entry = { category: formCategory.trim(), items: formItems };
+    const next = editing !== null
+      ? value.map((t, i) => i === editing ? entry : t)
+      : [...value, entry];
+    onChange(next);
+    cancelForm();
+  };
+
+  const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = value.findIndex((t) => t.category === active.id);
+      const newIndex = value.findIndex((t) => t.category === over.id);
+      onChange(arrayMove(value, oldIndex, newIndex));
+    }
+  };
+
+  const formJsx = (
+    <div className="space-y-2">
+      <input
+        type="text"
+        value={formCategory}
+        onChange={(e) => setFormCategory(e.target.value)}
+        placeholder="Category (e.g. Languages)"
+        className="w-full text-xs bg-neutral-900 border border-neutral-600 text-neutral-200 rounded px-2 py-1 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
+        onKeyDown={(e) => e.key === "Enter" && saveForm()}
+      />
+      <TagInput tags={formItems} onChange={setFormItems} placeholder="Add tags (Enter or comma to confirm)" />
+      <div className="flex gap-2">
+        <button onClick={saveForm} className="px-3 py-1 text-xs rounded-md bg-neutral-700 hover:bg-neutral-600 text-white border border-neutral-600 transition-colors">Save</button>
+        <button onClick={cancelForm} className="px-3 py-1 text-xs rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-400 border border-neutral-700 transition-colors">Cancel</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-2">
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={value.map((t) => t.category)} strategy={verticalListSortingStrategy}>
+          {value.map((tag, i) => (
+            <SortableSkillRow
+              key={tag.category}
+              id={tag.category}
+              tag={tag}
+              index={i}
+              editing={editing === i}
+              formJsx={formJsx}
+              onEdit={() => openEdit(i)}
+              onRemove={() => remove(i)}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
+
+      {adding ? (
+        <div className="px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md">{formJsx}</div>
+      ) : (
+        <button onClick={openAdd} className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
+          + Add category
+        </button>
+      )}
+    </div>
+  );
+};
+
+function renderMdPreview(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*")) return <em key={i}>{part.slice(1, -1)}</em>;
+    if (part.startsWith("`") && part.endsWith("`")) return <code key={i} className="px-1 py-0.5 rounded text-[11px] bg-neutral-700 text-neutral-200">{part.slice(1, -1)}</code>;
+    return part;
+  });
+}
+
+type ExpFormState = {
+  type: "FORTY_TWO" | "EXTERNAL";
+  projectSlug: string;
+  jobTitle: string;
+  employmentType: string;
+  companyName: string;
+  companyCity: string;
+  companyCountry: string;
+  startDate: string | null;
+  endDate: string | null;
+  description: string;
+};
+
+const ExpForm = ({
+  form,
+  setForm,
+  validatedWork42,
+  onSave,
+  onCancel,
+}: {
+  form: ExpFormState;
+  setForm: React.Dispatch<React.SetStateAction<ExpFormState>>;
+  validatedWork42: any[];
+  onSave: () => void;
+  onCancel: () => void;
+}) => {
+  const set = (key: keyof ExpFormState, val: any) => setForm((f) => ({ ...f, [key]: val }));
+  const [isPresent, setIsPresent] = React.useState(form.endDate === null);
+  const [descPreview, setDescPreview] = React.useState(false);
+
+  return (
+    <div className="space-y-4">
+      {/* Type toggle */}
+      <div className="flex items-center gap-3">
+        <p className="text-xs text-neutral-400 shrink-0">Type</p>
+        <div className="flex rounded-md border border-neutral-700 overflow-hidden">
+          {(["EXTERNAL", "FORTY_TWO"] as const).map((t) => (
+            <button key={t} onClick={() => set("type", t)}
+              className={`px-3 py-1 text-xs font-medium transition-colors ${form.type === t ? "bg-neutral-600 text-white" : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"}`}
+            >
+              {t === "FORTY_TWO" ? "42-validated" : "External"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {form.type === "FORTY_TWO" && (
+        <div>
+          <p className="text-xs text-neutral-400 mb-1">Linked 42 Project</p>
+          <select value={form.projectSlug} onChange={(e) => set("projectSlug", e.target.value)}
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded-md px-2 py-1.5 focus:outline-none focus:border-neutral-500"
+          >
+            <option value="">Select a validated work experience</option>
+            {validatedWork42.map((p: any) => (
+              <option key={p.id} value={p.project.slug}>{p.project.name} ({p.final_mark ?? "?"})</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Company row */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="col-span-1">
+          <p className="text-xs text-neutral-400 mb-1">Company <span className="text-red-500">*</span></p>
+          <input type="text" value={form.companyName} onChange={(e) => set("companyName", e.target.value)} placeholder="Acme Corp"
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
+        </div>
+        <div>
+          <p className="text-xs text-neutral-400 mb-1">City</p>
+          <input type="text" value={form.companyCity} onChange={(e) => set("companyCity", e.target.value)} placeholder="Paris"
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
+        </div>
+        <div>
+          <p className="text-xs text-neutral-400 mb-1">Country</p>
+          <input type="text" value={form.companyCountry} onChange={(e) => set("companyCountry", e.target.value)} placeholder="France"
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
+        </div>
+      </div>
+
+      {/* Role row */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="text-xs text-neutral-400 mb-1">Job Title</p>
+          <input type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} placeholder="e.g. Backend Engineer"
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
+        </div>
+        <div>
+          <p className="text-xs text-neutral-400 mb-1">Employment Type</p>
+          <select value={form.employmentType} onChange={(e) => set("employmentType", e.target.value)}
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500">
+            {EMPLOYMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Dates row */}
+      <div className="grid grid-cols-2 gap-2">
+        <MonthYearPicker label="Start Date *" value={form.startDate} onChange={(v) => set("startDate", v)} />
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-neutral-400">End Date</p>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPresent}
+                onChange={(e) => {
+                  setIsPresent(e.target.checked);
+                  if (e.target.checked) set("endDate", null);
+                }}
+                className="accent-green-500 w-3 h-3"
+              />
+              <span className="text-xs text-neutral-400">Present</span>
+            </label>
+          </div>
+          {isPresent ? (
+            <div className="flex items-center h-[34px] px-2 rounded border border-neutral-700 bg-neutral-900/50">
+              <span className="text-xs text-neutral-500">Current position</span>
+            </div>
+          ) : (
+            <MonthYearPicker label="" value={form.endDate} onChange={(v) => set("endDate", v)} />
+          )}
+        </div>
+      </div>
+
+      {/* Description */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-xs text-neutral-400">Description <span className="text-red-500">*</span></p>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-neutral-600">Markdown available: **bold**, *italic*, `code`</span>
+            <button onClick={() => setDescPreview((v) => !v)}
+              className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${descPreview ? "border-green-700 text-green-400 bg-green-950/30" : "border-neutral-700 text-neutral-500 hover:text-neutral-300"}`}
+            >
+              {descPreview ? "Edit" : "Preview"}
+            </button>
+          </div>
+        </div>
+        {descPreview ? (
+          <div className="min-h-[120px] w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-3 py-2 space-y-1.5">
+            {form.description.split("\n").filter(Boolean).map((line, i) => (
+              <p key={i} className="text-sm leading-relaxed text-neutral-300">{renderMdPreview(line)}</p>
+            ))}
+            {!form.description && <p className="text-neutral-600 text-sm">Nothing to preview yet.</p>}
+          </div>
+        ) : (
+          <textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={6}
+            placeholder="• Designed and implemented... &#10;• Led the migration of... &#10;• Technologies: C++20, CMake, Git"
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600 resize-y"
+          />
+        )}
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <button onClick={onSave} className="px-4 py-1.5 text-xs rounded-md bg-green-700 hover:bg-green-600 text-white border border-green-600 transition-colors font-medium">Save</button>
+        <button onClick={onCancel} className="px-4 py-1.5 text-xs rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-400 border border-neutral-700 transition-colors">Cancel</button>
+      </div>
+    </div>
+  );
+};
+
 const Home = () => {
   const { data } = useContext(AuthContext);
 
@@ -271,6 +744,99 @@ const Home = () => {
   const [isDisplayCohortRank, setIsDisplayCohortRank] = useState<boolean>((data as any).isDisplayCohortRank ?? false);
   const [isDisplayAllTimeRank, setIsDisplayAllTimeRank] = useState<boolean>((data as any).isDisplayAllTimeRank ?? false);
   const [bio, setBio] = useState<string>((data as any).bio ?? "");
+  const [skillTags, setSkillTags] = useState<SkillTagItem[]>(
+    ((data as any).skillTags ?? []).map((t: any) => ({
+      category: t.category,
+      items: Array.isArray(t.items) ? t.items : typeof t.items === "string" ? t.items.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
+    }))
+  );
+  const [featuredProjectIds, setFeaturedProjectIds] = useState<number[]>((data as any).featuredProjectIds ?? []);
+  const [activeTab, setActiveTab] = useState<"profile" | "experiences" | "projects" | "settings">("profile");
+  const [bioPreview, setBioPreview] = useState(false);
+  const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
+  const [expLoading, setExpLoading] = useState(true);
+  const [showAddExp, setShowAddExp] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingExpId, setEditingExpId] = useState<string | null>(null);
+  const [expForm, setExpForm] = useState<{
+    type: "FORTY_TWO" | "EXTERNAL";
+    projectSlug: string;
+    jobTitle: string;
+    employmentType: string;
+    companyName: string;
+    companyCity: string;
+    companyCountry: string;
+    startDate: string | null;
+    endDate: string | null;
+    description: string;
+  }>({
+    type: "EXTERNAL",
+    projectSlug: "",
+    jobTitle: "",
+    employmentType: "internship",
+    companyName: "",
+    companyCity: "",
+    companyCountry: "",
+    startDate: null,
+    endDate: null,
+    description: "",
+  });
+
+  useEffect(() => {
+    axios.get("/api/v2/me/work-experiences").then((r) => {
+      setWorkExperiences(sortExps(r.data));
+      setExpLoading(false);
+    }).catch(() => setExpLoading(false));
+  }, []);
+
+  const resetExpForm = () => {
+    setExpForm({ type: "EXTERNAL", projectSlug: "", jobTitle: "", employmentType: "internship", companyName: "", companyCity: "", companyCountry: "", startDate: null, endDate: null, description: "" });
+    setShowAddExp(false);
+    setEditingExpId(null);
+  };
+
+  const saveExp = async () => {
+    try {
+      if (editingExpId) {
+        const { data: updated } = await axios.patch(`/api/v2/me/work-experiences/${editingExpId}`, expForm);
+        setWorkExperiences((prev) => sortExps(prev.map((e) => e.id === editingExpId ? updated : e)));
+      } else {
+        const { data: created } = await axios.post("/api/v2/me/work-experiences", expForm);
+        setWorkExperiences((prev) => sortExps([...prev, created]));
+      }
+      resetExpForm();
+    } catch {}
+  };
+
+  const deleteExp = async (id: string) => {
+    await axios.delete(`/api/v2/me/work-experiences/${id}`);
+    setWorkExperiences((prev) => prev.filter((e) => e.id !== id));
+    setConfirmDeleteId(null);
+  };
+
+  const startEditExp = (exp: WorkExperience) => {
+    setShowAddExp(false);
+    setEditingExpId(exp.id);
+    setExpForm({
+      type: exp.type as "FORTY_TWO" | "EXTERNAL",
+      projectSlug: exp.projectSlug ?? "",
+      jobTitle: exp.jobTitle ?? "",
+      employmentType: exp.employmentType,
+      companyName: exp.companyName ?? "",
+      companyCity: exp.companyCity ?? "",
+      companyCountry: exp.companyCountry ?? "",
+      startDate: exp.startDate ?? null,
+      endDate: exp.endDate ?? null,
+      description: exp.description ?? "",
+    });
+  };
+
+  const sortExps = (exps: WorkExperience[]) =>
+    [...exps].sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? ""));
+
+  const usedSlugs42 = workExperiences.filter((e) => e.type === "FORTY_TWO").map((e) => e.projectSlug);
+  const validatedWork42 = data.extended42Data.projects_users
+    .filter((p: any) => p["validated?"] && WORK_EXP_SLUGS.has(p.project.slug) && (!usedSlugs42.includes(p.project.slug) || (editingExpId && workExperiences.find(e => e.id === editingExpId)?.projectSlug === p.project.slug)));
   const [projectGithubLinks, setProjectGithubLinks] = useState<Record<string, string>>(() => {
     const links: Record<string, string> = {};
     for (const link of ((data as any).projectGithubLinks ?? []) as { projectSlug: string; githubUrl: string }[]) {
@@ -303,9 +869,12 @@ const Home = () => {
       !!address.trim(),
       !!phone.trim(),
       Object.values(projectGithubLinks).some((v) => !!v.trim()),
+      workExperiences.length > 0,
+      skillTags.length > 0,
+      featuredProjectIds.length > 0,
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  }, [bio, githubUrl, linkedinUrl, address, phone, projectGithubLinks]);
+  }, [bio, githubUrl, linkedinUrl, address, phone, projectGithubLinks, workExperiences, skillTags, featuredProjectIds]);
   const projectUrl = `https://42cv.dev/api/badge/${data.id}/project`;
 
   const projectList = useMemo(
@@ -383,283 +952,342 @@ const Home = () => {
           </label>
           {isPublicProfile && (
             <>
-              {/* CV link */}
+              {/* CV link + completeness */}
               <div className="space-y-2">
                 <div className="flex items-center gap-3 px-3 py-2.5 bg-green-950/40 border border-green-800/50 rounded-lg">
                   <span className="text-xs text-green-400 shrink-0">Your CV is live at</span>
-                  <a
-                    href={`https://42cv.dev/${data.extended42Data.login}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-green-300 hover:text-green-100 truncate flex-1"
-                  >
+                  <a href={`https://42cv.dev/${data.extended42Data.login}`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-green-300 hover:text-green-100 truncate flex-1">
                     https://42cv.dev/{data.extended42Data.login}
                   </a>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`https://42cv.dev/${data.extended42Data.login}`);
-                    }}
-                    className="text-xs text-green-500 hover:text-green-300 shrink-0 transition-colors"
-                  >
-                    Copy
-                  </button>
+                  <button onClick={() => navigator.clipboard.writeText(`https://42cv.dev/${data.extended42Data.login}`)} className="text-xs text-green-500 hover:text-green-300 shrink-0 transition-colors">Copy</button>
                 </div>
-                {/* Completeness bar */}
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-neutral-500">CV completeness</span>
                     <span className="text-xs text-neutral-400">{cvCompleteness}%</span>
                   </div>
                   <div className="h-1 w-full bg-neutral-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${cvCompleteness}%`,
-                        backgroundColor: cvCompleteness === 100 ? "#22c55e" : cvCompleteness >= 50 ? "#eab308" : "#ef4444",
-                      }}
-                    />
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${cvCompleteness}%`, backgroundColor: cvCompleteness === 100 ? "#22c55e" : cvCompleteness >= 50 ? "#eab308" : "#ef4444" }} />
                   </div>
                 </div>
               </div>
 
-              {/* Bio */}
-              <div>
-                <p className="text-sm text-neutral-200 mb-1">Bio</p>
-                <p className="text-xs text-neutral-500 mb-3">A short summary shown at the top of your CV. 2&ndash;3 sentences about who you are and what you&apos;re looking for.</p>
-                <textarea
-                  value={bio}
-                  placeholder="e.g. Software engineer passionate about systems programming and open source. Looking for a backend role in a fast-paced environment."
-                  onChange={(e) => setBio(e.target.value)}
-                  onBlur={async () => {
-                    await axios.patch("/api/v2/me", {
-                      isDisplayEmail: isDisplayEmail ? "true" : "false",
-                      isDisplayName: isDisplayName ? "true" : "false",
-                      bio,
-                    });
-                  }}
-                  rows={3}
-                  maxLength={400}
-                  className="w-full text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-2 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600 resize-none"
-                />
-                <p className="text-xs text-neutral-600 text-right mt-1">{bio.length}/400</p>
-              </div>
-
-              {/* Contact links */}
-              <div>
-                <p className="text-sm text-neutral-200 mb-1">Contact & Links</p>
-                <p className="text-xs text-neutral-500 mb-3">Shown in the CV page header.</p>
-                <div className="space-y-2">
-                  {([
-                    { label: "GitHub URL", value: githubUrl, set: setGithubUrl, key: "githubUrl", placeholder: "https://github.com/username" },
-                    { label: "LinkedIn URL", value: linkedinUrl, set: setLinkedinUrl, key: "linkedinUrl", placeholder: "https://linkedin.com/in/username" },
-                    { label: "Address", value: address, set: setAddress, key: "address", placeholder: "City, Country" },
-                    { label: "Phone", value: phone, set: setPhone, key: "phone", placeholder: "+41 79 000 00 00" },
-                  ] as const).map(({ label, value, set, key, placeholder }) => (
-                    <div key={key} className="flex items-center gap-3">
-                      <span className="text-xs text-neutral-400 w-24 shrink-0">{label}</span>
-                      <input
-                        type="text"
-                        value={value}
-                        placeholder={placeholder}
-                        onChange={(e) => set(e.target.value)}
-                        onBlur={async () => {
-                          await axios.patch("/api/v2/me", {
-                            isDisplayEmail: isDisplayEmail ? "true" : "false",
-                            isDisplayName: isDisplayName ? "true" : "false",
-                            [key]: value,
-                          });
-                        }}
-                        className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Default theme */}
-              <label className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm text-neutral-200">Default CV theme</p>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    Initial appearance for visitors who open your profile.
-                  </p>
-                </div>
-                <div className="flex rounded-lg border border-neutral-700 overflow-hidden shrink-0">
-                  {([
-                    { value: false, icon: "☀️", label: "Light" },
-                    { value: true,  icon: "🌙", label: "Dark"  },
-                  ] as const).map(({ value, icon, label }) => (
-                    <button
-                      key={label}
-                      onClick={async () => {
-                        setDefaultDarkMode(value);
-                        await axios.patch("/api/v2/me", {
-                          isDisplayEmail: isDisplayEmail ? "true" : "false",
-                          isDisplayName: isDisplayName ? "true" : "false",
-                          defaultDarkMode: value ? "true" : "false",
-                        });
-                      }}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                        defaultDarkMode === value
-                          ? "bg-neutral-600 text-white"
-                          : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
-                      }`}
-                    >
-                      <span>{icon}</span>
-                      <span>{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </label>
-
-              {/* Rankings */}
-              <div>
-                <p className="text-sm text-neutral-200 mb-1">Rankings</p>
-                <p className="text-xs text-neutral-500 mb-3">Show your rank on your public profile. Computed weekly from the full 42 network via the 42 API.</p>
-                <div className="space-y-3">
-                  {([
-                    { key: "isDisplayCampusCohortRank" as const, label: "Campus cohort rank", desc: `Your rank among ${primaryCampus?.name ?? "your campus"} students who joined in the same pool year.`, value: isDisplayCampusCohortRank, set: setIsDisplayCampusCohortRank },
-                    { key: "isDisplayCohortRank" as const, label: "Cohort rank", desc: "Your rank among all 42 students who joined in the same pool year.", value: isDisplayCohortRank, set: setIsDisplayCohortRank },
-                    { key: "isDisplayAllTimeRank" as const, label: "All-time rank", desc: "Your rank among all 42 students.", value: isDisplayAllTimeRank, set: setIsDisplayAllTimeRank },
-                  ] as const).map(({ key, label, desc, value, set }) => (
-                    <label key={key} className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm text-neutral-200">{label}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          const next = !value;
-                          set(next);
-                          await axios.patch("/api/v2/me", {
-                            isDisplayEmail: isDisplayEmail ? "true" : "false",
-                            isDisplayName: isDisplayName ? "true" : "false",
-                            [key]: next ? "true" : "false",
-                          });
-                        }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                          value ? "bg-green-600" : "bg-neutral-700"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            value ? "translate-x-6" : "translate-x-1"
-                          }`}
-                        />
-                      </button>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <label className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm text-neutral-200">Show outstanding votes</p>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    Display star ratings on your validated projects.
-                  </p>
-                </div>
-                <button
-                  onClick={async () => {
-                    const next = !isDisplayOutstandingVotes;
-                    setIsDisplayOutstandingVotes(next);
-                    await axios.patch("/api/v2/me", {
-                      isDisplayEmail: isDisplayEmail ? "true" : "false",
-                      isDisplayName: isDisplayName ? "true" : "false",
-                      isDisplayOutstandingVotes: next ? "true" : "false",
-                    });
-                  }}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                    isDisplayOutstandingVotes ? "bg-green-600" : "bg-neutral-700"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isDisplayOutstandingVotes ? "translate-x-6" : "translate-x-1"
+              {/* Tab bar */}
+              <div className="flex border-b border-neutral-800 -mx-4 px-4 gap-1">
+                {([
+                  { id: "profile", label: "Profile" },
+                  { id: "experiences", label: "Experiences" },
+                  { id: "projects", label: "Projects" },
+                  { id: "settings", label: "Settings" },
+                ] as const).map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                      activeTab === id
+                        ? "border-green-500 text-green-400"
+                        : "border-transparent text-neutral-500 hover:text-neutral-300"
                     }`}
-                  />
-                </button>
-              </label>
-
-              {/* Project GitHub links */}
-              <div>
-                <p className="text-sm text-neutral-200 mb-1">Project GitHub Links</p>
-                <p className="text-xs text-neutral-500 mb-3">Optionally link each project to its GitHub repo. Recruiters will see a clickable GitHub icon on your CV.</p>
-                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {projectList.map((project) => {
-                    const slug = project.project.slug;
-                    const currentUrl = projectGithubLinks[slug] ?? "";
-                    return (
-                      <div key={project.id} className="flex items-center gap-3">
-                        <span className="text-xs text-neutral-400 w-36 shrink-0 truncate" title={project.project.name}>{project.project.name}</span>
-                        <input
-                          type="text"
-                          value={currentUrl}
-                          placeholder="https://github.com/user/repo"
-                          onChange={(e) => {
-                            setProjectGithubLinks((prev) => ({ ...prev, [slug]: e.target.value }));
-                          }}
-                          onBlur={async () => {
-                            const val = currentUrl.trim();
-                            if (val) {
-                              await axios.put("/api/v2/project-github-links", { projectSlug: slug, githubUrl: val });
-                              setProjectGithubLinks((prev) => ({ ...prev, [slug]: val }));
-                            } else {
-                              await axios.delete("/api/v2/project-github-links", { data: { projectSlug: slug } });
-                              setProjectGithubLinks((prev) => {
-                                const next = { ...prev };
-                                delete next[slug];
-                                return next;
-                              });
-                            }
-                          }}
-                          className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
 
-              {/* Achievements selection */}
-              {(data.extended42Data.achievements ?? []).length > 0 && (
-                <div>
-                  <p className="text-sm text-neutral-200 mb-1">Achievements on CV</p>
-                  <p className="text-xs text-neutral-500 mb-3">Select which achievements to display on your public profile.</p>
-                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                    {(data.extended42Data.achievements as any[])
-                      .filter((a) => a.visible !== false)
-                      .map((a) => {
-                        const checked = selectedAchievementIds.includes(a.id);
-                        return (
-                          <label key={a.id} className="flex items-start gap-3 cursor-pointer group">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={async () => {
-                                const next = checked
-                                  ? selectedAchievementIds.filter((id) => id !== a.id)
-                                  : [...selectedAchievementIds, a.id];
+              {/* ── PROFILE TAB ── */}
+              {activeTab === "profile" && (
+                <div className="space-y-6 pt-1">
+                  {/* Bio */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-medium text-neutral-200">Bio</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-neutral-600">Markdown available: **bold**, *italic*, `code`</span>
+                        <button onClick={() => setBioPreview((v) => !v)}
+                          className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${bioPreview ? "border-green-700 text-green-400 bg-green-950/30" : "border-neutral-700 text-neutral-500 hover:text-neutral-300"}`}
+                        >
+                          {bioPreview ? "Edit" : "Preview"}
+                        </button>
+                      </div>
+                    </div>
+                    {bioPreview ? (
+                      <div className="min-h-[120px] w-full text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-2 space-y-1.5">
+                        {bio.split("\n").filter(Boolean).map((line, i) => (
+                          <p key={i} className="text-sm leading-relaxed text-neutral-300">{renderMdPreview(line)}</p>
+                        ))}
+                        {!bio && <p className="text-neutral-600 text-sm">Nothing to preview yet.</p>}
+                      </div>
+                    ) : (
+                      <textarea
+                        value={bio}
+                        placeholder="e.g. Systems engineer specialised in C/C++, looking for a backend role."
+                        onChange={(e) => setBio(e.target.value)}
+                        onBlur={async () => { await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", bio }); }}
+                        rows={6}
+                        maxLength={400}
+                        className="w-full text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-2 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600 resize-none"
+                      />
+                    )}
+                    <p className="text-xs text-neutral-600 text-right mt-1">{bio.length}/400</p>
+                  </div>
+
+                  <hr className="border-neutral-800" />
+
+                  {/* Contact & Links */}
+                  <div>
+                    <p className="text-sm font-medium text-neutral-200 mb-3">Contact & Links</p>
+                    <div className="space-y-2">
+                      {([
+                        { label: "GitHub", value: githubUrl, set: setGithubUrl, key: "githubUrl", placeholder: "https://github.com/username" },
+                        { label: "LinkedIn", value: linkedinUrl, set: setLinkedinUrl, key: "linkedinUrl", placeholder: "https://linkedin.com/in/username" },
+                        { label: "Address", value: address, set: setAddress, key: "address", placeholder: "City, Country" },
+                        { label: "Phone", value: phone, set: setPhone, key: "phone", placeholder: "+41 79 000 00 00" },
+                      ] as const).map(({ label, value, set, key, placeholder }) => (
+                        <div key={key} className="flex items-center gap-3">
+                          <span className="text-xs text-neutral-400 w-20 shrink-0">{label}</span>
+                          <input type="text" value={value} placeholder={placeholder} onChange={(e) => set(e.target.value)}
+                            onBlur={async () => { await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", [key]: value }); }}
+                            className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <hr className="border-neutral-800" />
+
+                  {/* Skill Tags */}
+                  <div>
+                    <div className="flex items-baseline justify-between mb-1">
+                      <p className="text-sm font-medium text-neutral-200">Skill Tags</p>
+                      <span className="text-[10px] text-neutral-600">e.g. Programming, Tools, Languages</span>
+                    </div>
+                    <p className="text-xs text-neutral-500 mb-3">Freeform skill categories shown in the Overview sidebar.</p>
+                    <SkillTagsEditor
+                      value={skillTags}
+                      onChange={async (next) => {
+                        setSkillTags(next);
+                        await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", skillTags: next });
+                      }}
+                    />
+                  </div>
+
+                  <hr className="border-neutral-800" />
+
+                  {/* Achievements */}
+                  {(data.extended42Data.achievements ?? []).length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-neutral-200 mb-1">Achievements on CV</p>
+                      <p className="text-xs text-neutral-500 mb-3">Select which achievements to show on your public profile.</p>
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {(data.extended42Data.achievements as any[]).filter((a) => a.visible !== false).map((a) => {
+                          const checked = selectedAchievementIds.includes(a.id);
+                          return (
+                            <label key={a.id} className="flex items-start gap-3 cursor-pointer group">
+                              <input type="checkbox" checked={checked} onChange={async () => {
+                                const next = checked ? selectedAchievementIds.filter((id) => id !== a.id) : [...selectedAchievementIds, a.id];
                                 setSelectedAchievementIds(next);
-                                await axios.patch("/api/v2/me", {
-                                  isDisplayEmail: isDisplayEmail ? "true" : "false",
-                                  isDisplayName: isDisplayName ? "true" : "false",
-                                  selectedAchievementIds: next,
-                                });
-                              }}
-                              className="mt-0.5 accent-green-500 shrink-0"
-                            />
-                            <div>
-                              <p className="text-xs font-medium text-neutral-300 group-hover:text-white transition-colors">{a.name}</p>
-                              <p className="text-xs text-neutral-500">{a.description}</p>
-                            </div>
-                          </label>
-                        );
-                      })}
+                                await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", selectedAchievementIds: next });
+                              }} className="mt-0.5 accent-green-500 shrink-0" />
+                              <div>
+                                <p className="text-xs font-medium text-neutral-300 group-hover:text-white transition-colors">{a.name}</p>
+                                <p className="text-xs text-neutral-500">{a.description}</p>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── EXPERIENCES TAB ── */}
+              {activeTab === "experiences" && (
+                <div className="space-y-4 pt-1">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-200 mb-1">Professional Experiences</p>
+                    <p className="text-xs text-neutral-500 mb-3">
+                      Any professional experience: full-time jobs, internships, apprenticeships, work-study or freelance.<br />
+                      Entries with a company name, start date and description appear on your CV.
+                    </p>
+                    <div className="mb-3 px-3 py-2 rounded-md bg-amber-950/30 border border-amber-900/50 text-xs text-amber-400">
+                      Contract infos aren&apos;t exposed by the 42 API.<br />Fields must be filled manually, even for 42-validated contracts
+                    </div>
+                    {expLoading ? (
+                      <p className="text-xs text-neutral-500">Loading…</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {workExperiences.map((exp) => (
+                          <div key={exp.id} className="px-3 py-2.5 bg-neutral-800 border border-neutral-700 rounded-md">
+                            {editingExpId === exp.id ? (
+                              <ExpForm form={expForm} setForm={setExpForm} validatedWork42={validatedWork42} onSave={saveExp} onCancel={resetExpForm} />
+                            ) : (
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-neutral-200 truncate">
+                                    {exp.companyName || <span className="text-neutral-500 italic">No company</span>}
+                                    {exp.companyCity ? ` · ${exp.companyCity}` : ""}
+                                  </p>
+                                  <p className="text-xs text-neutral-400">
+                                    {exp.jobTitle ? `${exp.jobTitle} · ` : ""}{getEmploymentLabel(exp.employmentType)}
+                                    {exp.finalScore !== null && (
+                                      <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border" style={{ color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)", borderColor: "rgba(34,197,94,0.30)" }}>{exp.finalScore}</span>
+                                    )}
+                                  </p>
+                                  <p className="text-[11px] text-neutral-500 mt-0.5">{formatDateRange(exp.startDate, exp.endDate)}</p>
+                                </div>
+                                <div className="flex gap-2 shrink-0">
+                                  <button onClick={() => startEditExp(exp)} className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">Edit</button>
+                                  <button onClick={() => setConfirmDeleteId(exp.id)} className="text-xs text-red-500 hover:text-red-400 transition-colors">Delete</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {showAddExp ? (
+                          <div className="px-3 py-3 bg-neutral-800 border border-neutral-700 rounded-md">
+                            <ExpForm form={expForm} setForm={setExpForm} validatedWork42={validatedWork42} onSave={saveExp} onCancel={resetExpForm} />
+                          </div>
+                        ) : (
+                          <button onClick={() => { resetExpForm(); setShowAddExp(true); }} className="w-full py-2 text-xs text-neutral-500 hover:text-neutral-300 border border-dashed border-neutral-700 rounded-md transition-colors">
+                            + Add experience
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
+              {/* ── PROJECTS TAB ── */}
+              {activeTab === "projects" && (
+                <div className="space-y-6 pt-1">
+                  {/* Featured Projects */}
+                  <div>
+                    <p className="text-sm font-medium text-neutral-200 mb-1">Featured Projects</p>
+                    <p className="text-xs text-neutral-500 mb-3">Up to 5 projects shown pre-expanded in the Overview tab. Check to select, order is preserved.</p>
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {projectList.filter((p: any) => p["validated?"]).map((project: any) => {
+                        const idx = featuredProjectIds.indexOf(project.id);
+                        const checked = idx !== -1;
+                        return (
+                          <label key={project.id} className="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" checked={checked} disabled={!checked && featuredProjectIds.length >= 5}
+                              onChange={async () => {
+                                const next = checked ? featuredProjectIds.filter((id) => id !== project.id) : [...featuredProjectIds, project.id];
+                                setFeaturedProjectIds(next);
+                                await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", featuredProjectIds: next });
+                              }}
+                              className="accent-green-500 shrink-0"
+                            />
+                            {checked && <span className="text-[10px] text-neutral-500 w-4 shrink-0 text-center">{idx + 1}</span>}
+                            <div className="flex-1 flex items-center gap-2 min-w-0">
+                              <span className="text-xs font-medium text-neutral-300 group-hover:text-white transition-colors truncate">{project.project.name}</span>
+                              <span className="text-[10px] text-neutral-600 shrink-0">{project.final_mark ?? "-"}</span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Project GitHub Links */}
+                  <div>
+                    <p className="text-sm font-medium text-neutral-200 mb-1">Project GitHub Links</p>
+                    <p className="text-xs text-neutral-500 mb-3">Link each project to its GitHub repo — recruiters see a clickable icon on your CV.</p>
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {projectList.map((project) => {
+                        const slug = project.project.slug;
+                        const currentUrl = projectGithubLinks[slug] ?? "";
+                        return (
+                          <div key={project.id} className="flex items-center gap-3">
+                            <span className="text-xs text-neutral-400 w-36 shrink-0 truncate" title={project.project.name}>{project.project.name}</span>
+                            <input type="text" value={currentUrl} placeholder="https://github.com/user/repo"
+                              onChange={(e) => setProjectGithubLinks((prev) => ({ ...prev, [slug]: e.target.value }))}
+                              onBlur={async () => {
+                                const val = currentUrl.trim();
+                                if (val) {
+                                  await axios.put("/api/v2/project-github-links", { projectSlug: slug, githubUrl: val });
+                                  setProjectGithubLinks((prev) => ({ ...prev, [slug]: val }));
+                                } else {
+                                  await axios.delete("/api/v2/project-github-links", { data: { projectSlug: slug } });
+                                  setProjectGithubLinks((prev) => { const next = { ...prev }; delete next[slug]; return next; });
+                                }
+                              }}
+                              className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── SETTINGS TAB ── */}
+              {activeTab === "settings" && (
+                <div className="space-y-5 pt-1">
+                  {/* Default theme */}
+                  <label className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-neutral-200">Default CV theme</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">Initial appearance for visitors.</p>
+                    </div>
+                    <div className="flex rounded-lg border border-neutral-700 overflow-hidden shrink-0">
+                      {([{ value: false, icon: "☀️", label: "Light" }, { value: true, icon: "🌙", label: "Dark" }] as const).map(({ value, icon, label }) => (
+                        <button key={label} onClick={async () => { setDefaultDarkMode(value); await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", defaultDarkMode: value ? "true" : "false" }); }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${defaultDarkMode === value ? "bg-neutral-600 text-white" : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"}`}
+                        >
+                          <span>{icon}</span><span>{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </label>
+
+                  <hr className="border-neutral-800" />
+
+                  {/* Rankings */}
+                  <div>
+                    <p className="text-sm font-medium text-neutral-200 mb-1">Rankings</p>
+                    <p className="text-xs text-neutral-500 mb-3">Computed weekly from the full 42 network.</p>
+                    <div className="space-y-3">
+                      {([
+                        { key: "isDisplayCampusCohortRank" as const, label: "Campus cohort rank", desc: `Rank among ${primaryCampus?.name ?? "your campus"} students from the same pool year.`, value: isDisplayCampusCohortRank, set: setIsDisplayCampusCohortRank },
+                        { key: "isDisplayCohortRank" as const, label: "Cohort rank", desc: "Rank among all 42 students from the same pool year.", value: isDisplayCohortRank, set: setIsDisplayCohortRank },
+                        { key: "isDisplayAllTimeRank" as const, label: "All-time rank", desc: "Rank among all 42 students.", value: isDisplayAllTimeRank, set: setIsDisplayAllTimeRank },
+                      ] as const).map(({ key, label, desc, value, set }) => (
+                        <label key={key} className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-sm text-neutral-200">{label}</p>
+                            <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>
+                          </div>
+                          <button onClick={async () => { const next = !value; set(next); await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", [key]: next ? "true" : "false" }); }}
+                            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${value ? "bg-green-600" : "bg-neutral-700"}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? "translate-x-6" : "translate-x-1"}`} />
+                          </button>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <hr className="border-neutral-800" />
+
+                  {/* Outstanding votes */}
+                  <label className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-neutral-200">Show outstanding votes</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">Display star ratings on validated projects.</p>
+                    </div>
+                    <button onClick={async () => { const next = !isDisplayOutstandingVotes; setIsDisplayOutstandingVotes(next); await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", isDisplayOutstandingVotes: next ? "true" : "false" }); }}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${isDisplayOutstandingVotes ? "bg-green-600" : "bg-neutral-700"}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isDisplayOutstandingVotes ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
+                  </label>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -821,6 +1449,41 @@ const Home = () => {
         </div>
         <FeedbackForm login={data.extended42Data.login} />
       </section>
+
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setConfirmDeleteId(null)}>
+          <div
+            className="w-full max-w-sm mx-4 rounded-xl border bg-neutral-900 border-neutral-700 p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-5">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-neutral-100">Delete experience</p>
+                <p className="text-xs text-neutral-500 mt-0.5">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="px-4 py-1.5 text-xs rounded-md border border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteExp(confirmDeleteId)}
+                className="px-4 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

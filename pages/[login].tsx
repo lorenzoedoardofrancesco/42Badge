@@ -1,14 +1,19 @@
 import { GetServerSideProps } from "next";
 import Head from "next/head";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import prisma from "../db";
 import collection from "lodash-es/collection";
 import { getBase64ImageFromUrl } from "../lib/getBase64ImageFromUrl";
+import { WorkExperience, isDisplayable, formatDateRange, getEmploymentLabel } from "../lib/workExperiences";
+import { Si42 } from "@icons-pack/react-simple-icons";
+import { SKILL_PALETTE } from "../lib/skillPalette";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Skill = { name: string; level: number };
+
+type SkillTag = { category: string; items: string[] };
 
 type Project = {
   id: number;
@@ -61,6 +66,9 @@ type PublicProfile = {
   phone: string | null;
   bio: string | null;
   projectGithubLinks: Record<string, string>;
+  workExperiences: WorkExperience[];
+  featuredProjectIds: number[];
+  skillTags: SkillTag[];
 };
 
 const ordinal = (n: number) => {
@@ -158,6 +166,21 @@ function tokens(dark: boolean) {
         accent: "#2c3e50", // anthracite - typographic, refined
         tierColors: TIER_COLORS,
       };
+}
+
+// ─── Markdown renderer ────────────────────────────────────────────────────────
+
+function renderMd(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**"))
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*"))
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    if (part.startsWith("`") && part.endsWith("`"))
+      return <code key={i} style={{ fontFamily: "monospace", fontSize: "0.9em" }}>{part.slice(1, -1)}</code>;
+    return part;
+  });
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -411,7 +434,7 @@ function SkillRadar({
             </span>
             <span className="text-sm ml-2 tabular-nums" style={{ color, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 500 }}>
               {radarSkills[hoveredIndex].level.toFixed(2)}
-                </span>
+            </span>
           </>
         )}
       </div>
@@ -490,6 +513,9 @@ export default function CVPage({
     });
   };
 
+  const hasOverview = profile.workExperiences.length > 0 || profile.featuredProjectIds.length > 0;
+  const [view, setView] = useState<"overview" | "full">(hasOverview ? "overview" : "full");
+
   const mainCursus =
     profile.cursusUsers.find((c) => !c.cursus.slug.includes("piscine")) ??
     profile.cursusUsers[profile.cursusUsers.length - 1];
@@ -553,6 +579,10 @@ export default function CVPage({
     return sum + (stat?.outstandingCount ?? 0);
   }, 0);
 
+  const featuredProjects = profile.featuredProjectIds
+    .map((id) => profile.projects.find((p) => p.id === id))
+    .filter((p): p is Project => !!p);
+
   const [lvlBarWidth, setLvlBarWidth] = useState(0);
   useEffect(() => {
     const timer = setTimeout(() => setLvlBarWidth(lvlPct), 120);
@@ -601,7 +631,7 @@ export default function CVPage({
       </Head>
 
       <div
-        className="min-h-screen transition-colors duration-300 overflow-x-hidden"
+        className="min-h-screen transition-colors duration-300 [overflow-x:clip]"
         style={{ backgroundColor: t.bg, color: t.text, fontFamily: "'HelveticaNeue', sans-serif" }}
       >
         {/* ── HERO ───────────────────────────────────────────────────── */}
@@ -609,9 +639,26 @@ export default function CVPage({
           className="border-b"
           style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg }}
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 sm:pt-8 pb-7 relative">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 sm:pt-8 pb-3 relative">
             {/* Top-right actions */}
             <div className="absolute top-5 sm:top-8 right-4 sm:right-6 z-10 flex items-center gap-2 no-print">
+            {hasOverview && (
+              <div className="flex rounded-lg border overflow-hidden shrink-0" style={{ borderColor: t.cardBorder }}>
+                {(["overview", "full"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    className="flex items-center gap-1 px-2 py-1.5 sm:px-3 text-xs font-medium transition-colors capitalize"
+                    style={{
+                      backgroundColor: view === v ? accent : t.bg,
+                      color: view === v ? (dark ? "#0d1117" : "#ffffff") : t.textSub,
+                    }}
+                  >
+                    {v === "overview" ? "Overview" : "Full"}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               onClick={() => {
                 const prev = skillView;
@@ -739,25 +786,31 @@ export default function CVPage({
             {profile.bio && (
               <div className="mt-4 pl-3 overflow-hidden" style={{ borderLeft: `2px solid ${accent}` }}>
                 {profile.bio.split("\n").map((line, i) => (
-                  <p key={i} className="text-sm leading-relaxed italic" style={{ color: t.textSub, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300, marginTop: i > 0 ? "0.5em" : 0 }}>
-                    {line || <br />}
+                  <p key={i} className="text-sm leading-relaxed" style={{ color: t.textSub, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300, marginTop: i > 0 ? "0.5em" : 0 }}>
+                    {line ? renderMd(line) : <br />}
                   </p>
                 ))}
               </div>
             )}
 
             {/* Stat strip - 6 items on desktop, 3+3 on mobile */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-6">
+            <div className="mt-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 h-px" style={{ backgroundColor: t.hrColor }} />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Si42 size={11} color={t.textMuted} />
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>Statistics</span>
+              </div>
+              <div className="flex-1 h-px" style={{ backgroundColor: t.hrColor }} />
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {/* Student since - year big, month small */}
               {activeCursus?.begin_at && (
                 <div
                   className="rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 border min-w-0"
                   style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
                 >
-                  <div className="text-[10px] sm:text-xs uppercase tracking-widest mb-1 truncate" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>
-                    <span className="sm:hidden">Student since</span>
-                    <span className="hidden sm:inline">Student since</span>
-                  </div>
+                  <div className="text-[10px] sm:text-xs uppercase tracking-widest mb-1 truncate" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>Student since</div>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-lg sm:text-2xl font-bold leading-none" style={{ color: accent, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 700 }}>
                       {new Date(activeCursus.begin_at).getFullYear()}
@@ -771,20 +824,20 @@ export default function CVPage({
 
               {/* Projects */}
               <div
-                className="rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 border min-w-0"
+                className="relative group cursor-help rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 border min-w-0 overflow-visible"
                 style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
               >
-                <div className="text-[10px] sm:text-xs uppercase tracking-widest mb-1 truncate" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>
-                  Projects
-                </div>
+                <div className="text-[10px] sm:text-xs uppercase tracking-widest mb-1 truncate" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>Projects</div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-lg sm:text-2xl font-bold leading-none" style={{ color: accent, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 700 }}>
                     {validatedProjects.length}
                   </span>
-                  <span className="text-xs sm:text-sm" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>
-                    validated
-                  </span>
+                  <span className="text-xs sm:text-sm" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>validated</span>
                 </div>
+                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 px-3 py-2 rounded-lg text-xs leading-snug pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-center z-20" style={{ backgroundColor: "#1f2328", color: "#e6edf3", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                  Number of projects successfully validated at École 42. Each project is peer-reviewed by fellow students.
+                  <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0" style={{ borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #1f2328" }} />
+                </span>
               </div>
 
               {/* Outstanding counter - only if enabled and any exist */}
@@ -854,24 +907,18 @@ export default function CVPage({
               )}
             </div>
 
-            {/* Level card - full width, below the stat cards */}
-            <div
-              className="mt-3 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 border"
-              style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
-            >
-              <div className="text-center text-base mb-2" style={{ color: t.textSub, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 500 }}>
-                level {lvlInt} - {lvlPct}%
+            {/* Level bar - inline, compact */}
+            <div className="relative group cursor-help mt-3 py-2.5 flex items-center gap-3">
+              <span className="text-xs uppercase tracking-widest shrink-0" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>Level <span className="font-bold" style={{ color: accent }}>{lvlInt}</span></span>
+              <div className="relative flex-1 h-[3px] rounded-full overflow-hidden" style={{ backgroundColor: t.hrColor }}>
+                <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${lvlBarWidth}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold tabular-nums shrink-0" style={{ color: accent, fontFamily: "'HelveticaNeue', sans-serif", minWidth: "1.5rem", textAlign: "right" }}>{lvlInt}</span>
-                <div className="relative flex-1 h-[7px] rounded-full overflow-hidden" style={{ backgroundColor: t.hrColor }}>
-                  <div
-                    className="h-full rounded-full transition-all duration-1000"
-                    style={{ width: `${lvlBarWidth}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }}
-                  />
-                </div>
-                <span className="text-sm tabular-nums shrink-0" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", minWidth: "1.5rem" }}>{lvlInt + 1}</span>
-              </div>
+              <span className="text-xs tabular-nums shrink-0" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>{lvlPct}%</span>
+              <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 w-64 px-3 py-2 rounded-lg text-xs leading-snug pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-center z-20" style={{ backgroundColor: "#1f2328", color: "#e6edf3", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                École 42 progression level. Reflects overall mastery across all completed projects and skills.
+                <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0" style={{ borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #1f2328" }} />
+              </span>
+            </div>
             </div>
           </div>
 
@@ -879,46 +926,40 @@ export default function CVPage({
 
         {/* ── MAIN CONTENT ──────────────────────────────────────────── */}
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-10">
+          {view === "overview" && hasOverview ? (
           <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 print-single-col">
-          {/* LEFT: Skills + Achievements */}
+          {/* OVERVIEW LEFT: Skill Tags + Achievements */}
           <aside className="space-y-5 order-2 lg:order-1 print-order-1 print-mb lg:sticky lg:top-6 lg:self-start">
-            {skills.length > 0 && (
+            {profile.skillTags.length > 0 && (
               <FadeIn delay={200}>
-              <div
-                className="rounded-xl p-6 border"
-                style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h2
-                    className="text-xs font-bold uppercase tracking-widest"
-                    style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
-                  >
+                <div className="rounded-xl p-6 border" style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}>
+                  <h2 className="text-xs font-bold uppercase tracking-widest mb-5" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}>
                     Skills
                   </h2>
-                  {skills.length >= 3 && (
-                    <button
-                      onClick={() => setSkillView((v) => v === "bars" ? "radar" : "bars")}
-                      className="no-print flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] uppercase tracking-wider font-medium transition-colors"
-                      style={{ borderColor: t.cardBorder, color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
-                    >
-                      {skillView === "bars" ? (
-                        <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><line x1="22" y1="8.5" x2="12" y2="15.5"/><line x1="2" y1="8.5" x2="12" y2="15.5"/></svg>Radar</>
-                      ) : (
-                        <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Bars</>
-                      )}
-                    </button>
-                  )}
-                </div>
-                {skillView === "bars" ? (
-                  <div className="space-y-5">
-                    {skills.map((skill, i) => (
-                      <SkillBar key={skill.name} skill={skill} color={accent} index={i} t={t} />
-                    ))}
+                  <div className="space-y-4">
+                    {profile.skillTags.map((tag, i) => {
+                      const c = SKILL_PALETTE[i % SKILL_PALETTE.length];
+                      return (
+                        <div key={i}>
+                          <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: c.text, fontFamily: "'HelveticaNeue', sans-serif" }}>
+                            {tag.category}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {tag.items.map((item) => (
+                              <span
+                                key={item}
+                                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border"
+                                style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text, fontFamily: "'HelveticaNeue', sans-serif" }}
+                              >
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <SkillRadar skills={skills} color={accent} t={t} />
-                )}
-              </div>
+                </div>
               </FadeIn>
             )}
 
@@ -929,9 +970,10 @@ export default function CVPage({
                 style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
               >
                 <h2
-                  className="text-xs font-bold uppercase tracking-widest mb-5"
+                  className="text-xs font-bold uppercase tracking-widest mb-5 flex items-center gap-1.5"
                   style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
                 >
+                  <Si42 size={11} color={t.textMuted} />
                   Achievements
                 </h2>
                 <div className="space-y-3">
@@ -977,15 +1019,328 @@ export default function CVPage({
               </FadeIn>
             )}
 
-            <div className="text-center pt-1 no-print">
-              <Link
-                href="/"
-                className="text-xs transition-colors"
-                style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}
+          </aside>
+
+          {/* OVERVIEW RIGHT: Experiences + Featured Projects */}
+          <section className="order-1 lg:order-2 print-order-2 space-y-10">
+            {profile.workExperiences.length > 0 && (
+              <div>
+                <FadeIn delay={100}>
+                  <h2 className="text-2xl font-bold mb-5" style={{ fontFamily: "'HelveticaNeue', sans-serif", color: t.text, letterSpacing: "0.02em" }}>
+                    Professional Experience
+                  </h2>
+                </FadeIn>
+                <div className="space-y-5">
+                  {profile.workExperiences.map((exp, i) => (
+                    <FadeIn key={exp.id} delay={100 + i * 60}>
+                      <div
+                        className="rounded-xl border print-break-inside-avoid overflow-hidden"
+                        style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
+                      >
+                        {/* Header row */}
+                        <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+                          <div className="min-w-0">
+                            <p className="text-[15px] font-bold leading-tight" style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif" }}>
+                              {exp.companyName}
+                            </p>
+                            {(exp.companyCity || exp.companyCountry) && (
+                              <p className="text-[12px] mt-0.5" style={{ color: t.textSub, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                                {[exp.companyCity, exp.companyCountry].filter(Boolean).join(", ")}
+                              </p>
+                            )}
+                            {exp.jobTitle && (
+                              <p className="text-[13px] font-semibold mt-1" style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif" }}>
+                                {exp.jobTitle}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-[12px]" style={{ color: t.textSub, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                              {formatDateRange(exp.startDate, exp.endDate)}
+                            </p>
+                            <span
+                              className="inline-block text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded border mt-1.5"
+                              style={{ color: t.textSub, borderColor: t.cardBorder, backgroundColor: "transparent", fontFamily: "'HelveticaNeue', sans-serif" }}
+                            >
+                              {getEmploymentLabel(exp.employmentType).toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        {exp.description && (
+                          <>
+                            <hr style={{ borderColor: t.cardBorder }} />
+                            <div className="px-5 py-3 space-y-1.5">
+                              {exp.description.split("\n").filter(Boolean).map((line, j) => (
+                                <p key={j} className="text-[13px] leading-relaxed" style={{ color: t.textSub, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                                  {renderMd(line)}
+                                </p>
+                              ))}
+                            </div>
+                          </>
+                        )}
+
+                        {/* Footer: score + certified by 42 */}
+                        {exp.type === "FORTY_TWO" && (
+                          <div className="flex items-center gap-2 px-5 pb-4 pt-1">
+                            {exp.finalScore !== null && (
+                              <span
+                                className="text-sm font-bold px-2.5 py-0.5 rounded-lg border"
+                                style={{ color: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)", borderColor: "rgba(34,197,94,0.30)", fontFamily: "'HelveticaNeue', sans-serif" }}
+                              >
+                                {exp.finalScore}
+                              </span>
+                            )}
+                            <span className="relative group flex items-center gap-1.5 cursor-help">
+                              <Si42 size={16} style={{ color: t.textSub }} />
+                              <span className="text-[12px]" style={{ color: t.textSub, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 400 }}>
+                                Certified by 42
+                              </span>
+                              <span
+                                className="absolute left-0 bottom-full mb-2 w-56 px-3 py-2 rounded-lg text-xs leading-snug pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20"
+                                style={{ backgroundColor: "#1f2328", color: "#e6edf3", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}
+                              >
+                                This experience was validated and scored through the official École 42 internship program.
+                                <span className="absolute left-4 top-full w-0 h-0" style={{ borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #1f2328" }} />
+                              </span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </FadeIn>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {featuredProjects.length > 0 && (
+              <div>
+                <FadeIn delay={200}>
+                  <h2 className="text-2xl font-bold mb-5" style={{ fontFamily: "'HelveticaNeue', sans-serif", color: t.text, letterSpacing: "0.02em" }}>
+                    Selected École 42 Projects
+                  </h2>
+                </FadeIn>
+                <div className="space-y-4">
+                  {featuredProjects.map((project) => {
+                    const tier = scoreTier(project.finalMark, project.validated);
+                    const tColors = t.tierColors[tier];
+                    const desc = projectDescriptions[project.slug];
+                    const stat = project.teamId ? teamStats[project.teamId] : null;
+                    return (
+                      <div key={project.id} className="rounded-xl border overflow-hidden print-project-row" style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg, boxShadow: t.cardShadow }}>
+                        {/* Main row */}
+                        <div
+                          className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4"
+                          style={{ backgroundColor: "transparent" }}
+                        >
+                          {/* Score badge */}
+                          <div className="shrink-0">
+                            <span
+                              className="text-sm sm:text-base px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border inline-block min-w-[48px] sm:min-w-[58px] text-center"
+                              style={{
+                                color: tColors.color,
+                                backgroundColor: tColors.bg,
+                                borderColor: tColors.border,
+                                fontFamily: "'HelveticaNeue', sans-serif",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {project.finalMark ?? "-"}
+                            </span>
+                          </div>
+
+                          {/* Name + date */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="font-bold text-[13px] sm:text-[15px] uppercase tracking-wide truncate"
+                                style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif", letterSpacing: "0.08em" }}
+                              >
+                                {project.name}
+                              </span>
+                              {project.markedAt && (
+                                <span className="hidden sm:inline text-xs shrink-0" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                                  {new Date(project.markedAt).toLocaleDateString("en", { month: "short", day: "numeric" })}
+                                </span>
+                              )}
+                            </div>
+                            {project.markedAt && (
+                              <span className="sm:hidden text-[11px]" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+                                {new Date(project.markedAt).toLocaleDateString("en", { month: "short", day: "numeric" })}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Stars */}
+                          {showOutstandingVotes && (() => {
+                            const total = correctionNumbers[project.slug] ?? null;
+                            const outstanding = stat?.outstandingCount ?? 0;
+                            if (!total) return null;
+                            return (
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                {Array.from({ length: total }).map((_, i) => (
+                                  <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill={i < outstanding ? "#eab308" : "none"} stroke={i < outstanding ? "#eab308" : t.textMuted} strokeWidth="1.5">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                  </svg>
+                                ))}
+                              </div>
+                            );
+                          })()}
+
+                          {/* GitHub link + intra link */}
+                          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 no-print">
+                            {profile.projectGithubLinks[project.slug] && (
+                              <a
+                                href={profile.projectGithubLinks[project.slug]}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-colors shrink-0"
+                                style={{ borderColor: `${accent}40`, backgroundColor: `${accent}10` }}
+                                title="View on GitHub"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill={accent}>
+                                  <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
+                                </svg>
+                              </a>
+                            )}
+                            <a
+                              href={`https://projects.intra.42.fr/projects/${project.slug}/projects_users/${project.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-colors shrink-0"
+                              style={{ borderColor: `${accent}40`, backgroundColor: `${accent}10` }}
+                              title="View on 42 Intra"
+                            >
+                              <svg width="14" height="14" viewBox="442 17 44 30" fill={accent} xmlns="http://www.w3.org/2000/svg">
+                                <path d="M442 38.7359H457.473V46.4891H465.194V32.4781H449.748L465.194 17H457.473L442 32.4781V38.7359Z" />
+                                <path d="M468.527 24.7484L476.252 17H468.527V24.7484Z" />
+                                <path d="M476.252 24.7484L468.527 32.4781V40.2031H476.252V32.4781L484 24.7484V17H476.252V24.7484Z" />
+                                <path d="M484 32.4781L476.252 40.2031H484V32.4781Z" />
+                              </svg>
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* Description panel - always visible in overview */}
+                        <div className="px-3 sm:px-5 pb-4 pt-3" style={{ borderTop: `1px solid ${t.cardBorder}` }}>
+                          {desc === "loading" ? (
+                            <p className="text-xs italic" style={{ color: t.textMuted }}>Loading...</p>
+                          ) : desc ? (
+                            <p className="text-[15px] leading-relaxed" style={{ color: t.textSub }}>{desc}</p>
+                          ) : (
+                            <p className="text-sm italic" style={{ color: t.textMuted }}>No description available.</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
+          </div>
+          ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 print-single-col">
+          {/* LEFT: Skills + Achievements */}
+          <aside className="space-y-5 order-2 lg:order-1 print-order-1 print-mb lg:sticky lg:top-6 lg:self-start">
+            {skills.length > 0 && (
+              <FadeIn delay={200}>
+              <div
+                className="rounded-xl p-6 border"
+                style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
               >
-                powered by 42cv.dev
-              </Link>
-            </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2
+                    className="text-xs font-bold uppercase tracking-widest flex items-center gap-1.5"
+                    style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
+                  >
+                    <Si42 size={11} color={t.textMuted} />
+                    Skills
+                  </h2>
+                  {skills.length >= 3 && (
+                    <button
+                      onClick={() => setSkillView((v) => v === "bars" ? "radar" : "bars")}
+                      className="no-print flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] uppercase tracking-wider font-medium transition-colors"
+                      style={{ borderColor: t.cardBorder, color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
+                    >
+                      {skillView === "bars" ? (
+                        <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><line x1="22" y1="8.5" x2="12" y2="15.5"/><line x1="2" y1="8.5" x2="12" y2="15.5"/></svg>Radar</>
+                      ) : (
+                        <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Bars</>
+                      )}
+                    </button>
+                  )}
+                </div>
+                {skillView === "bars" ? (
+                  <div className="space-y-5">
+                    {skills.map((skill, i) => (
+                      <SkillBar key={skill.name} skill={skill} color={accent} index={i} t={t} />
+                    ))}
+                  </div>
+                ) : (
+                  <SkillRadar skills={skills} color={accent} t={t} />
+                )}
+              </div>
+              </FadeIn>
+            )}
+
+            {profile.achievements.length > 0 && (
+              <FadeIn delay={350}>
+              <div
+                className="rounded-xl p-6 border print-break-inside-avoid"
+                style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder, boxShadow: t.cardShadow }}
+              >
+                <h2
+                  className="text-xs font-bold uppercase tracking-widest mb-5 flex items-center gap-1.5"
+                  style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif" }}
+                >
+                  <Si42 size={11} color={t.textMuted} />
+                  Achievements
+                </h2>
+                <div className="space-y-3">
+                  {profile.achievements.map((a) => {
+                    const tierColor =
+                      a.tier === "challenge" ? "#a855f7" :
+                      a.tier === "hard"      ? "#f97316" :
+                      a.tier === "medium"    ? "#3b82f6" :
+                      a.tier === "easy"      ? "#22c55e" : accent;
+                    return (
+                      <div
+                        key={a.id}
+                        className="pl-3 py-0.5"
+                        style={{ borderLeft: `2px solid ${tierColor}` }}
+                      >
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p
+                            className="text-[13px] leading-tight"
+                            style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 500 }}
+                          >
+                            {a.name}
+                          </p>
+                          {a.tier && a.tier !== "none" && (
+                            <span
+                              className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded"
+                              style={{ color: tierColor, backgroundColor: `${tierColor}18`, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 500 }}
+                            >
+                              {a.tier}
+                            </span>
+                          )}
+                        </div>
+                        <p
+                          className="text-[11px] leading-snug"
+                          style={{ color: t.textSub, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}
+                        >
+                          {a.description}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              </FadeIn>
+            )}
+
           </aside>
 
           {/* RIGHT: Projects */}
@@ -1183,8 +1538,15 @@ export default function CVPage({
             })()}
           </section>
           </div>
+          )}
 
         </main>
+
+        <footer className="no-print max-w-6xl mx-auto px-4 sm:px-6 py-6 flex justify-center border-t" style={{ borderColor: t.hrColor }}>
+          <Link href="/" className="text-xs transition-colors hover:opacity-80" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
+            powered by 42cv.dev
+          </Link>
+        </footer>
       </div>
     </>
   );
@@ -1262,6 +1624,12 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
       phone: (user as any).phone ?? null,
       bio: (user as any).bio ?? null,
       projectGithubLinks: {},
+      workExperiences: [],  // populated below
+      featuredProjectIds: (user as any).featuredProjectIds ?? [],
+      skillTags: ((user as any).skillTags as any[] ?? []).map((t: any) => ({
+        category: t.category,
+        items: Array.isArray(t.items) ? t.items : typeof t.items === "string" ? t.items.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
+      })),
       achievements: (() => {
         const selectedIds: number[] = (user as any).selectedAchievementIds ?? [];
         if (selectedIds.length === 0) return [];
@@ -1279,6 +1647,13 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
     for (const link of githubLinks) {
       profile.projectGithubLinks[link.projectSlug] = link.githubUrl;
     }
+
+    // Load work experiences
+    const workExps = await (prisma as any).workExperience.findMany({
+      where: { userId: user.id },
+      orderBy: [{ order: "asc" }, { startDate: "desc" }],
+    });
+    profile.workExperiences = workExps.filter((e: WorkExperience) => isDisplayable(e));
 
     // Pre-load all project descriptions from DB cache
     const projectSlugs = (data.projects_users ?? [])

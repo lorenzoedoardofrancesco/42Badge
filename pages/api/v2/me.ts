@@ -68,7 +68,7 @@ class ValidateError extends Error {
 
 const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
-    const { isDisplayEmail, isDisplayName, isDisplayPhoto, isDisplayProjectCount, isPublicProfile, isDisplayOutstandingVotes, selectedAchievementIds, githubUrl, linkedinUrl, address, phone, defaultDarkMode, isDisplayCampusCohortRank, isDisplayCohortRank, isDisplayAllTimeRank, bio } = req.body as {
+    const { isDisplayEmail, isDisplayName, isDisplayPhoto, isDisplayProjectCount, isPublicProfile, isDisplayOutstandingVotes, selectedAchievementIds, githubUrl, linkedinUrl, address, phone, defaultDarkMode, isDisplayCampusCohortRank, isDisplayCohortRank, isDisplayAllTimeRank, bio, featuredProjectIds, skillTags } = req.body as {
       isDisplayEmail?: string;
       isDisplayName?: string;
       isDisplayPhoto?: string;
@@ -85,6 +85,8 @@ const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
       isDisplayCohortRank?: string;
       isDisplayAllTimeRank?: string;
       bio?: string;
+      featuredProjectIds?: number[];
+      skillTags?: any;
     };
     if (!isDisplayEmail || !isDisplayName)
       throw new ValidateError(
@@ -128,6 +130,10 @@ const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
         ...(isDisplayCohortRank !== undefined && { isDisplayCohortRank: isDisplayCohortRank === "true" }),
         ...(isDisplayAllTimeRank !== undefined && { isDisplayAllTimeRank: isDisplayAllTimeRank === "true" }),
         ...(bio !== undefined && { bio: bio || null }),
+        ...(featuredProjectIds !== undefined && {
+          featuredProjectIds: { set: featuredProjectIds },
+        }),
+        ...(skillTags !== undefined && { skillTags }),
       },
     });
 

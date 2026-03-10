@@ -63,7 +63,7 @@ const NewUserPage = () => {
       </section>
 
       <Link href={"/"} className="text-sm text-neutral-500 hover:text-neutral-300 transition-colors">
-        ← Back to badges
+        ← Back to 42cv
       </Link>
     </Layout>
   );

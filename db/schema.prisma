@@ -60,6 +60,30 @@ model User {
   isDisplayCohortRank         Boolean @default(false)
   isDisplayAllTimeRank        Boolean @default(false)
   bio                         String?
+  featuredProjectIds          Int[]   @default([])
+  skillTags                   Json?
+  workExperiences             WorkExperience[]
+}
+
+model WorkExperience {
+  id             String   @id @default(cuid())
+  userId         String
+  type           String   @default("EXTERNAL") // "FORTY_TWO" | "EXTERNAL"
+  projectSlug    String?
+  finalScore     Int?
+  jobTitle       String?
+  employmentType String   @default("internship")
+  companyName    String?
+  companyCity    String?
+  companyCountry String?
+  startDate      String?
+  endDate        String?
+  description    String?
+  order          Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model ProjectDescription {
