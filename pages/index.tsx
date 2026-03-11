@@ -96,58 +96,21 @@ const StatsOptions = ({
         <p className="border border-amber-800/50 bg-amber-950/30 text-amber-200/80 rounded-lg p-3 text-sm">
           Changes may take up to 12 hours due to browser and CDN cache.
         </p>
-        <label className="flex items-center gap-3">
-          <span className="text-sm text-neutral-400 w-28">Display Name</span>
-          <select
-            className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 appearance-none focus:outline-none focus:border-neutral-500"
-            value={isDisplayName ? "true" : "false"}
-            onChange={(option) =>
-              setIsDisplayName(option.target.value === "true")
-            }
-          >
-            <option value={"true"}>Yes</option>
-            <option value={"false"}>No</option>
-          </select>
-        </label>
-        <label className="flex items-center gap-3">
-          <span className="text-sm text-neutral-400 w-28">Display Email</span>
-          <select
-            className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 appearance-none focus:outline-none focus:border-neutral-500"
-            value={isDisplayEmail ? "true" : "false"}
-            onChange={(option) =>
-              setIsDisplayEmail(option.target.value === "true")
-            }
-          >
-            <option value={"true"}>Yes</option>
-            <option value={"false"}>No</option>
-          </select>
-        </label>
-        <label className="flex items-center gap-3">
-          <span className="text-sm text-neutral-400 w-28">Display Photo</span>
-          <select
-            className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 appearance-none focus:outline-none focus:border-neutral-500"
-            value={isDisplayPhoto ? "true" : "false"}
-            onChange={(option) =>
-              setIsDisplayPhoto(option.target.value === "true")
-            }
-          >
-            <option value={"true"}>Yes</option>
-            <option value={"false"}>No</option>
-          </select>
-        </label>
-        <label className="flex items-center gap-3">
-          <span className="text-sm text-neutral-400 w-28">Projects</span>
-          <select
-            className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 appearance-none focus:outline-none focus:border-neutral-500"
-            value={isDisplayProjectCount ? "true" : "false"}
-            onChange={(option) =>
-              setIsDisplayProjectCount(option.target.value === "true")
-            }
-          >
-            <option value={"true"}>Yes</option>
-            <option value={"false"}>No</option>
-          </select>
-        </label>
+        {([
+          { label: "Display Name", value: isDisplayName, set: setIsDisplayName },
+          { label: "Display Email", value: isDisplayEmail, set: setIsDisplayEmail },
+          { label: "Display Photo", value: isDisplayPhoto, set: setIsDisplayPhoto },
+          { label: "Projects", value: isDisplayProjectCount, set: setIsDisplayProjectCount },
+        ] as const).map(({ label, value, set }) => (
+          <label key={label} className="flex items-center justify-between gap-4">
+            <span className="text-sm text-neutral-400">{label}</span>
+            <button onClick={() => set(!value)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${value ? "bg-green-600" : "bg-neutral-700"}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </label>
+        ))}
         <button
           className="text-sm px-4 py-1.5 border border-neutral-700 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={isFetching}
@@ -605,42 +568,42 @@ const ExpForm = ({
       )}
 
       {/* Company row */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="col-span-1">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div>
           <p className="text-xs text-neutral-400 mb-1">Company <span className="text-red-500">*</span></p>
           <input type="text" value={form.companyName} onChange={(e) => set("companyName", e.target.value)} placeholder="Acme Corp"
-            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded-md px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
         </div>
         <div>
           <p className="text-xs text-neutral-400 mb-1">City</p>
           <input type="text" value={form.companyCity} onChange={(e) => set("companyCity", e.target.value)} placeholder="Paris"
-            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded-md px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
         </div>
         <div>
           <p className="text-xs text-neutral-400 mb-1">Country</p>
           <input type="text" value={form.companyCountry} onChange={(e) => set("companyCountry", e.target.value)} placeholder="France"
-            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded-md px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
         </div>
       </div>
 
       {/* Role row */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
           <p className="text-xs text-neutral-400 mb-1">Job Title</p>
           <input type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} placeholder="e.g. Backend Engineer"
-            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded-md px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600" />
         </div>
         <div>
           <p className="text-xs text-neutral-400 mb-1">Employment Type</p>
           <select value={form.employmentType} onChange={(e) => set("employmentType", e.target.value)}
-            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500">
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded-md px-2 py-1.5 focus:outline-none focus:border-neutral-500">
             {EMPLOYMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </div>
       </div>
 
       {/* Dates row */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <MonthYearPicker label="Start Date *" value={form.startDate} onChange={(v) => set("startDate", v)} />
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -659,7 +622,7 @@ const ExpForm = ({
             </label>
           </div>
           {isPresent ? (
-            <div className="flex items-center h-[34px] px-2 rounded border border-neutral-700 bg-neutral-900/50">
+            <div className="flex items-center h-[34px] px-2 rounded-md border border-neutral-700 bg-neutral-900/50">
               <span className="text-xs text-neutral-500">Current position</span>
             </div>
           ) : (
@@ -670,19 +633,19 @@ const ExpForm = ({
 
       {/* Description */}
       <div>
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-1">
           <p className="text-xs text-neutral-400">Description <span className="text-red-500">*</span></p>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-neutral-600">Markdown available: **bold**, *italic*, `code`</span>
+            <span className="text-[10px] text-neutral-600">Markdown: **bold**, *italic*, `code`</span>
             <button onClick={() => setDescPreview((v) => !v)}
-              className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${descPreview ? "border-green-700 text-green-400 bg-green-950/30" : "border-neutral-700 text-neutral-500 hover:text-neutral-300"}`}
+              className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${descPreview ? "border-green-700 text-green-400 bg-green-950/30" : "border-neutral-700 text-neutral-500 hover:text-neutral-300"}`}
             >
               {descPreview ? "Edit" : "Preview"}
             </button>
           </div>
         </div>
         {descPreview ? (
-          <div className="min-h-[120px] w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-3 py-2 space-y-1.5">
+          <div className="min-h-[120px] w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded-md px-3 py-2 space-y-1.5">
             {form.description.split("\n").filter(Boolean).map((line, i) => (
               <p key={i} className="text-sm leading-relaxed text-neutral-300">{renderMdPreview(line)}</p>
             ))}
@@ -691,7 +654,7 @@ const ExpForm = ({
         ) : (
           <textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={6}
             placeholder="• Designed and implemented... &#10;• Led the migration of... &#10;• Technologies: C++20, CMake, Git"
-            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600 resize-y"
+            className="w-full text-sm bg-neutral-900 border border-neutral-700 text-neutral-200 rounded-md px-2 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600 resize-y"
           />
         )}
       </div>
@@ -1112,7 +1075,7 @@ const Home = () => {
                       Entries with a company name, start date and description appear on your CV.
                     </p>
                     <div className="mb-3 px-3 py-2 rounded-md bg-amber-950/30 border border-amber-900/50 text-xs text-amber-400">
-                      Contract infos aren&apos;t exposed by the 42 API.<br />Fields must be filled manually, even for 42-validated contracts
+                      The 42 API doesn&apos;t expose contract details — fill in all fields manually, including for 42-validated entries.
                     </div>
                     {expLoading ? (
                       <p className="text-xs text-neutral-500">Loading…</p>
