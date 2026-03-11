@@ -1122,13 +1122,14 @@ export default function CVPage({
                   </h2>
                 </FadeIn>
                 <div className="space-y-4">
-                  {featuredProjects.map((project) => {
+                  {featuredProjects.map((project, i) => {
                     const tier = scoreTier(project.finalMark, project.validated);
                     const tColors = t.tierColors[tier];
                     const desc = projectDescriptions[project.slug];
                     const stat = project.teamId ? teamStats[project.teamId] : null;
                     return (
-                      <div key={project.id} className="rounded-xl border overflow-hidden print-project-row" style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg, boxShadow: t.cardShadow }}>
+                      <FadeIn key={project.id} delay={100 + i * 60}>
+                      <div className="rounded-xl border overflow-hidden print-project-row" style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg, boxShadow: t.cardShadow }}>
                         {/* Main row */}
                         <div
                           className="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4"
@@ -1233,6 +1234,7 @@ export default function CVPage({
                           )}
                         </div>
                       </div>
+                      </FadeIn>
                     );
                   })}
                 </div>
