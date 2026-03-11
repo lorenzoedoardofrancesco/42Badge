@@ -47,6 +47,9 @@ const Level = ({ color, level, height, isLevel21 = false }: LevelProps) => {
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        <filter id="text_shadow" x="-30%" y="-80%" width="160%" height="260%">
+          <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.9" />
+        </filter>
         <clipPath id="bar_fill_clip">
           <rect x="25" y={barY} width={progressWidth} height={barH} rx="17" />
         </clipPath>
@@ -100,9 +103,9 @@ const Level = ({ color, level, height, isLevel21 = false }: LevelProps) => {
         x="25" y={barY} width="445" height={barH} rx="17"
         fill="url(#bar_gloss)"
       />
-      {/* Level text - light layer (visible over dark bg) */}
+      {/* Level text */}
       <text
-        fill="#d0d0d0"
+        fill="#ffffff"
         xmlSpace="preserve"
         className="fadeIn"
         style={{ animationDelay: "2.5s", whiteSpace: "nowrap" }}
@@ -111,23 +114,7 @@ const Level = ({ color, level, height, isLevel21 = false }: LevelProps) => {
         fontWeight="700"
         letterSpacing="0.5px"
         textAnchor="middle"
-      >
-        <tspan x="247" y={height - 21}>
-          level {level_integer} - {level_percentage}%
-        </tspan>
-      </text>
-      {/* Level text - dark layer (clipped to filled bar area) */}
-      <text
-        fill="#1a1a1a"
-        clipPath="url(#bar_fill_clip)"
-        xmlSpace="preserve"
-        className="fadeIn"
-        style={{ animationDelay: "2.5s", whiteSpace: "nowrap" }}
-        fontFamily="'Futura LT', sans-serif"
-        fontSize="14"
-        fontWeight="700"
-        letterSpacing="0.5px"
-        textAnchor="middle"
+        filter="url(#text_shadow)"
       >
         <tspan x="247" y={height - 21}>
           level {level_integer} - {level_percentage}%
