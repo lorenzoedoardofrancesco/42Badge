@@ -44,8 +44,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Try JSON API first
     const jsonRes = await fetch(`https://www.credly.com/badges/${id}/public_json`, {
       headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(8000),
     });
-    const json = await jsonRes.json().catch(() => null);
+    const contentLength = parseInt(jsonRes.headers.get("content-length") ?? "0", 10);
+    if (contentLength > 1024 * 1024) return res.status(502).json({ message: "Response too large" });
+    const jsonText = await jsonRes.text();
+    if (jsonText.length > 1024 * 1024) return res.status(502).json({ message: "Response too large" });
+    const json = (() => { try { return JSON.parse(jsonText); } catch { return null; } })();
     const bt = json?.data?.badge_template;
     const recipient: string | null =
       json?.data?.user?.name ??
@@ -69,8 +74,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Fallback: scrape the badge page HTML
     const htmlRes = await fetch(`https://www.credly.com/badges/${id}`, {
       headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(8000),
     });
+    const htmlContentLength = parseInt(htmlRes.headers.get("content-length") ?? "0", 10);
+    if (htmlContentLength > 2 * 1024 * 1024) return res.status(502).json({ message: "Response too large" });
     const html = await htmlRes.text();
+    if (html.length > 2 * 1024 * 1024) return res.status(502).json({ message: "Response too large" });
 
     // Extract recipient from og:title: "Badge Name was issued by Issuer to First Last."
     const ogTitleMatch = html.match(/property="og:title"\s+content="([^"]+)"/i)

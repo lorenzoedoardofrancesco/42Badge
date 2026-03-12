@@ -51,6 +51,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ message: "Image exceeds 200 KB limit" });
   }
 
+  // Validate magic bytes to prevent MIME spoofing
+  const bytes = Buffer.from(base64Data, "base64");
+  const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+  if (!isJpeg && !isPng) {
+    return res.status(400).json({ message: "File content does not match a valid JPG or PNG image" });
+  }
+
   try {
     const user = await prisma.user.findUnique({ where: { email: token.email! }, select: { id: true } });
     if (!user) return res.status(404).json({ message: "User not found" });

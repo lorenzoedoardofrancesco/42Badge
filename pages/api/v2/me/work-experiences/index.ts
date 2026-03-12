@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import prisma from "../../../../../db";
+import { EMPLOYMENT_TYPES } from "../../../../../lib/workExperiences";
+
+const VALID_EMPLOYMENT_VALUES = new Set<string>(EMPLOYMENT_TYPES.map(t => t.value));
 
 class AuthError extends Error {
   constructor() {
@@ -69,6 +72,18 @@ const PostHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (type !== "FORTY_TWO" && type !== "EXTERNAL") {
     return res.status(400).json({ error: "type must be FORTY_TWO or EXTERNAL" });
   }
+  if (!VALID_EMPLOYMENT_VALUES.has(employmentType)) {
+    return res.status(400).json({ error: "invalid employmentType" });
+  }
+
+  // Field length validation
+  if (jobTitle && jobTitle.length > 200) return res.status(400).json({ error: "jobTitle too long (max 200)" });
+  if (companyName && companyName.length > 200) return res.status(400).json({ error: "companyName too long (max 200)" });
+  if (companyCity && companyCity.length > 100) return res.status(400).json({ error: "companyCity too long (max 100)" });
+  if (companyCountry && companyCountry.length > 100) return res.status(400).json({ error: "companyCountry too long (max 100)" });
+  if (description && description.length > 2000) return res.status(400).json({ error: "description too long (max 2000)" });
+  if (startDate && !/^\d{4}-\d{2}(-\d{2})?$/.test(startDate)) return res.status(400).json({ error: "invalid startDate format" });
+  if (endDate && !/^\d{4}-\d{2}(-\d{2})?$/.test(endDate)) return res.status(400).json({ error: "invalid endDate format" });
 
   let finalScore: number | null = null;
 

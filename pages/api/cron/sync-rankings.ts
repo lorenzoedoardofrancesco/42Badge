@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import crypto from "crypto";
 import prisma from "../../../db";
 import { axiosClientFor42, queue } from "../../../lib/api/42api";
 
@@ -192,8 +193,10 @@ async function fetchCampusEntries(
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = req.headers.authorization;
-  if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  const auth = req.headers.authorization ?? "";
+  const expected = `Bearer ${process.env.CRON_SECRET ?? ""}`;
+  if (!process.env.CRON_SECRET || auth.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(auth), Buffer.from(expected))) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -367,6 +370,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ blocked: blocked.size, ranked: upserted });
   } catch (e) {
     console.error("[cron] sync-rankings failed:", e);
-    return res.status(500).json({ error: "Sync failed", message: (e as any)?.message, stack: (e as any)?.stack?.split("\n").slice(0, 5) });
+    return res.status(500).json({ error: "Sync failed" });
   }
 }

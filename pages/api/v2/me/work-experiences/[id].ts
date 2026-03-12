@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import prisma from "../../../../../db";
+import { EMPLOYMENT_TYPES } from "../../../../../lib/workExperiences";
+
+const VALID_EMPLOYMENT_VALUES = new Set<string>(EMPLOYMENT_TYPES.map(t => t.value));
 
 class AuthError extends Error {
   constructor() {
@@ -48,6 +51,20 @@ const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
     description?: string;
     order?: number;
   };
+
+  if (employmentType !== undefined && !VALID_EMPLOYMENT_VALUES.has(employmentType)) {
+    return res.status(400).json({ error: "invalid employmentType" });
+  }
+
+  // Field length validation
+  if (jobTitle !== undefined && jobTitle && jobTitle.length > 200) return res.status(400).json({ error: "jobTitle too long (max 200)" });
+  if (companyName !== undefined && companyName && companyName.length > 200) return res.status(400).json({ error: "companyName too long (max 200)" });
+  if (companyCity !== undefined && companyCity && companyCity.length > 100) return res.status(400).json({ error: "companyCity too long (max 100)" });
+  if (companyCountry !== undefined && companyCountry && companyCountry.length > 100) return res.status(400).json({ error: "companyCountry too long (max 100)" });
+  if (description !== undefined && description && description.length > 2000) return res.status(400).json({ error: "description too long (max 2000)" });
+  if (startDate !== undefined && startDate && !/^\d{4}-\d{2}(-\d{2})?$/.test(startDate)) return res.status(400).json({ error: "invalid startDate format" });
+  if (endDate !== undefined && endDate && !/^\d{4}-\d{2}(-\d{2})?$/.test(endDate)) return res.status(400).json({ error: "invalid endDate format" });
+  if (order !== undefined && (!Number.isInteger(order) || order < 0 || order > 100)) return res.status(400).json({ error: "invalid order value" });
 
   const updated = await prisma.workExperience.update({
     where: { id },

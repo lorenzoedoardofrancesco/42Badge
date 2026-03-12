@@ -35,11 +35,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: "githubUrl is required" });
   }
 
-  // Basic URL validation
+  // URL validation: only allow known git hosting platforms
+  const ALLOWED_GIT_HOSTS = ["github.com", "gitlab.com", "bitbucket.org", "codeberg.org", "sr.ht"];
   try {
     const url = new URL(githubUrl);
     if (!["http:", "https:"].includes(url.protocol)) {
       return res.status(400).json({ error: "invalid URL" });
+    }
+    if (!ALLOWED_GIT_HOSTS.some((h) => url.hostname === h || url.hostname.endsWith(`.${h}`))) {
+      return res.status(400).json({ error: "URL must be from a recognized git hosting platform" });
     }
   } catch {
     return res.status(400).json({ error: "invalid URL" });

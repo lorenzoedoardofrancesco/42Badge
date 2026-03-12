@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import crypto from "crypto";
 import prisma from "../../../db";
 import { axiosClientFor42 } from "../../../lib/api/42api";
 
@@ -61,8 +62,10 @@ async function fetchOnce(slug: string): Promise<string | null | "error"> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = req.headers.authorization;
-  if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  const auth = req.headers.authorization ?? "";
+  const expected = `Bearer ${process.env.CRON_SECRET ?? ""}`;
+  if (!process.env.CRON_SECRET || auth.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(auth), Buffer.from(expected))) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 

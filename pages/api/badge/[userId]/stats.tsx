@@ -143,7 +143,7 @@ const GetHandler = async (req: NextApiRequest, res: NextApiResponse) => {
         message: error.message,
       });
     }
-    throw error;
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

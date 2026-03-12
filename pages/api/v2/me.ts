@@ -112,6 +112,36 @@ const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
         ].filter(Boolean)
       );
 
+    // ── Input validation ──────────────────────────────────────────────
+    if (bio !== undefined && bio.length > 500) return res.status(400).json({ message: "Bio too long (max 500)" });
+    if (photoMode !== undefined && !["none", "42campus", "custom"].includes(photoMode)) return res.status(400).json({ message: "Invalid photoMode" });
+    if (phone !== undefined && phone && !/^[\d\s\-+().]{0,20}$/.test(phone)) return res.status(400).json({ message: "Invalid phone format" });
+    if (address !== undefined && address && address.length > 200) return res.status(400).json({ message: "Address too long (max 200)" });
+    if (githubUrl !== undefined && githubUrl && (!/^https?:\/\//i.test(githubUrl) || githubUrl.length > 2000)) return res.status(400).json({ message: "Invalid GitHub URL" });
+    if (linkedinUrl !== undefined && linkedinUrl && (!/^https?:\/\//i.test(linkedinUrl) || linkedinUrl.length > 2000)) return res.status(400).json({ message: "Invalid LinkedIn URL" });
+    if (selectedAchievementIds !== undefined && (!Array.isArray(selectedAchievementIds) || selectedAchievementIds.length > 50)) return res.status(400).json({ message: "Invalid achievement IDs" });
+    if (featuredProjectIds !== undefined && (!Array.isArray(featuredProjectIds) || featuredProjectIds.length > 5)) return res.status(400).json({ message: "Max 5 featured projects" });
+    if (skillTags !== undefined) {
+      if (!Array.isArray(skillTags) || skillTags.length > 20) return res.status(400).json({ message: "Invalid skillTags" });
+      for (const t of skillTags) {
+        if (typeof t?.category !== "string" || t.category.length > 50) return res.status(400).json({ message: "Invalid skill category" });
+        if (!Array.isArray(t?.items) || t.items.length > 30 || t.items.some((i: any) => typeof i !== "string" || i.length > 50)) return res.status(400).json({ message: "Invalid skill items" });
+      }
+    }
+    if (projectDescriptionOverrides !== undefined) {
+      if (typeof projectDescriptionOverrides !== "object" || Array.isArray(projectDescriptionOverrides)) return res.status(400).json({ message: "Invalid project overrides" });
+      for (const [k, v] of Object.entries(projectDescriptionOverrides)) {
+        if (typeof k !== "string" || typeof v !== "string" || v.length > 1000) return res.status(400).json({ message: "Invalid project override value" });
+      }
+    }
+    if (credlyBadges !== undefined) {
+      if (!Array.isArray(credlyBadges) || credlyBadges.length > 4) return res.status(400).json({ message: "Max 4 Credly badges" });
+      for (const b of credlyBadges) {
+        if (typeof b?.id !== "string" || !/^[0-9a-f-]{36}$/i.test(b.id)) return res.status(400).json({ message: "Invalid Credly badge ID" });
+        if (b.label !== undefined && (typeof b.label !== "string" || b.label.length > 100)) return res.status(400).json({ message: "Credly badge label too long (max 100)" });
+      }
+    }
+
     const token = await getToken({ req });
     if (!token) throw new AuthError();
 

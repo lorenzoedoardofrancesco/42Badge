@@ -13,6 +13,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!Array.isArray(teamIds) || teamIds.length === 0) {
     return res.status(200).json({});
   }
+  // Validate each element is a safe positive integer
+  if (teamIds.length > 200 || teamIds.some((id) => !Number.isInteger(id) || id < 1 || id > 2147483647)) {
+    return res.status(400).json({ error: "invalid teamIds" });
+  }
 
   // Check cache first
   const cached = await (prisma as any).teamStat.findMany({

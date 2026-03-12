@@ -782,12 +782,17 @@ const Home = () => {
   const { show: showModal, node: modalNode } = useModal();
 
   const patchMe = useCallback(async (updates: Record<string, any>) => {
-    await axios.patch("/api/v2/me", {
-      isDisplayEmail: isDisplayEmail ? "true" : "false",
-      isDisplayName: isDisplayName ? "true" : "false",
-      ...updates,
-    });
-  }, [isDisplayEmail, isDisplayName]);
+    try {
+      await axios.patch("/api/v2/me", {
+        isDisplayEmail: isDisplayEmail ? "true" : "false",
+        isDisplayName: isDisplayName ? "true" : "false",
+        ...updates,
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? "Failed to save changes.";
+      showModal({ title: "Error", message: msg, icon: "alert" });
+    }
+  }, [isDisplayEmail, isDisplayName, showModal]);
 
   const [photoMode, setPhotoMode] = useState<"none" | "42campus" | "custom">((data as any).photoMode ?? "none");
   const [customPhotoUrl, setCustomPhotoUrl] = useState<string>((data as any).customPhotoUrl ?? "");
@@ -892,12 +897,20 @@ const Home = () => {
         setWorkExperiences((prev) => sortExps([...prev, created]));
       }
       resetExpForm();
-    } catch {}
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? "Failed to save experience.";
+      showModal({ title: "Error", message: msg, icon: "alert" });
+    }
   };
 
   const deleteExp = async (id: string) => {
-    await axios.delete(`/api/v2/me/work-experiences/${id}`);
-    setWorkExperiences((prev) => prev.filter((e) => e.id !== id));
+    try {
+      await axios.delete(`/api/v2/me/work-experiences/${id}`);
+      setWorkExperiences((prev) => prev.filter((e) => e.id !== id));
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? "Failed to delete experience.";
+      showModal({ title: "Error", message: msg, icon: "alert" });
+    }
   };
 
   const startEditExp = (exp: WorkExperience) => {
@@ -1108,9 +1121,14 @@ const Home = () => {
                             <img src={customPhotoUrl} alt="Custom photo" className="w-16 h-16 rounded-full object-cover border-2 border-neutral-700" />
                             <button
                               onClick={async () => {
-                                await axios.delete("/api/v2/upload-photo");
-                                setCustomPhotoUrl("");
-                                setPhotoMode("none");
+                                try {
+                                  await axios.delete("/api/v2/upload-photo");
+                                  setCustomPhotoUrl("");
+                                  setPhotoMode("none");
+                                } catch (err: any) {
+                                  const msg = err?.response?.data?.message ?? "Failed to delete photo.";
+                                  showModal({ title: "Error", message: msg, icon: "alert" });
+                                }
                               }}
                               className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-neutral-900 border border-neutral-600 flex items-center justify-center text-neutral-400 hover:text-red-400 hover:border-red-700 transition-colors"
                               title="Remove photo"
@@ -1190,14 +1208,14 @@ const Home = () => {
                     <p className="text-sm font-medium text-neutral-200 mb-3">Contact & Links</p>
                     <div className="space-y-2">
                       {([
-                        { label: "GitHub", value: githubUrl, set: setGithubUrl, key: "githubUrl", placeholder: "https://github.com/username" },
-                        { label: "LinkedIn", value: linkedinUrl, set: setLinkedinUrl, key: "linkedinUrl", placeholder: "https://linkedin.com/in/username" },
-                        { label: "Address", value: address, set: setAddress, key: "address", placeholder: "City, Country" },
-                        { label: "Phone", value: phone, set: setPhone, key: "phone", placeholder: "+41 79 000 00 00" },
-                      ] as const).map(({ label, value, set, key, placeholder }) => (
+                        { label: "GitHub", value: githubUrl, set: setGithubUrl, key: "githubUrl", placeholder: "https://github.com/username", maxLength: 2000 },
+                        { label: "LinkedIn", value: linkedinUrl, set: setLinkedinUrl, key: "linkedinUrl", placeholder: "https://linkedin.com/in/username", maxLength: 2000 },
+                        { label: "Address", value: address, set: setAddress, key: "address", placeholder: "City, Country", maxLength: 200 },
+                        { label: "Phone", value: phone, set: setPhone, key: "phone", placeholder: "+41 79 000 00 00", maxLength: 20 },
+                      ] as const).map(({ label, value, set, key, placeholder, maxLength }) => (
                         <div key={key} className="flex items-center gap-3">
                           <span className="text-xs text-neutral-400 w-20 shrink-0">{label}</span>
-                          <input type="text" value={value} placeholder={placeholder} onChange={(e) => set(e.target.value)}
+                          <input type="text" value={value} placeholder={placeholder} maxLength={maxLength} onChange={(e) => set(e.target.value)}
                             onBlur={async () => { await patchMe({ [key]: value }); }}
                             className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
                           />
@@ -1408,12 +1426,18 @@ const Home = () => {
                               onChange={(e) => setProjectGithubLinks((prev) => ({ ...prev, [slug]: e.target.value }))}
                               onBlur={async () => {
                                 const val = currentUrl.trim();
-                                if (val) {
-                                  await axios.put("/api/v2/project-github-links", { projectSlug: slug, githubUrl: val });
-                                  setProjectGithubLinks((prev) => ({ ...prev, [slug]: val }));
-                                } else {
-                                  await axios.delete("/api/v2/project-github-links", { data: { projectSlug: slug } });
-                                  setProjectGithubLinks((prev) => { const next = { ...prev }; delete next[slug]; return next; });
+                                try {
+                                  if (val) {
+                                    await axios.put("/api/v2/project-github-links", { projectSlug: slug, githubUrl: val });
+                                    setProjectGithubLinks((prev) => ({ ...prev, [slug]: val }));
+                                  } else {
+                                    await axios.delete("/api/v2/project-github-links", { data: { projectSlug: slug } });
+                                    setProjectGithubLinks((prev) => { const next = { ...prev }; delete next[slug]; return next; });
+                                  }
+                                } catch (err: any) {
+                                  const msg = err?.response?.data?.error ?? "Failed to save link.";
+                                  showModal({ title: "Invalid URL", message: msg, icon: "alert" });
+                                  setProjectGithubLinks((prev) => ({ ...prev }));
                                 }
                               }}
                               className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
