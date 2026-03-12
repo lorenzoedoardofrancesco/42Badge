@@ -4,8 +4,8 @@
   <p>🚀 Your 42 journey, recruiter-ready. Instant CV page and dynamic stats badges for 🎓 École 42 students.<br />Just sign in!</p>
   <a href="https://github.com/lorenzoedoardofrancesco/42cv/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
   <a href="https://42cv.dev"><img src="https://img.shields.io/badge/deployed%20on-Vercel-black.svg?logo=vercel" alt="Deployed on Vercel" /></a>
-  <img src="https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB" alt="React" />
-  <img src="https://img.shields.io/badge/Next.js-black?logo=next.js" alt="Next.js" />
+  <img src="https://img.shields.io/badge/React_19-20232A?logo=react&logoColor=61DAFB" alt="React 19" />
+  <img src="https://img.shields.io/badge/Next.js_16-black?logo=next.js" alt="Next.js 16" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
 </div>
 
@@ -15,19 +15,26 @@
 
 Generate a clean, recruiter-friendly CV page at `42cv.dev/your-login`:
 
-- **42 Statistics** - student since, validated projects, outstanding votes, campus / cohort / all-time rankings and level progress, each with recruiter-facing tooltips so the numbers actually mean something
-- **Professional experience** - internships, full-time, work-study, apprenticeships; Markdown descriptions, auto-sorted by date
-- **Skill tags** - freeform categories with color-coded chips (Programming Languages, Tools, Libraries, Practices, Human Languages…); type to add, drag to reorder
-- **42 skills & achievements** - radar chart or bar view from the 42 API; curated achievement selection with difficulty tiers
-- **Selected projects** - pick your best work; scores, outstanding votes, and per-project GitHub links
+- **Profile header** - display name, pool month/year, campus with country flag, profile photo (none / 42 campus / custom upload via Cloudinary), and bio with Markdown support (**bold**, *italic*, `code`)
+- **Contact & links** - email, phone, address, GitHub, LinkedIn, and personal website, each with its own icon
+- **42 Statistics** - level progress bar, outstanding votes, and campus cohort / cohort / all-time weekly rankings, each with recruiter-facing tooltips explaining what the numbers mean
+- **Professional experience** - full-time, part-time, freelance, internship, apprenticeship, work-study; Markdown descriptions, auto-sorted by date; 42-validated entries show final score and a "Certified by 42" label
+- **Certifications** - link Credly badges by URL or embed code; ownership verified by matching recipient name; displayed with badge image, issuer, and verification link
+- **Selected projects** - pick up to 5 best projects shown pre-expanded; scores, outstanding vote stars, per-project GitHub links, and custom description overrides
+- **Skill tags** - freeform categories with color-coded chips (Programming Languages, Tools, Libraries...); type to add, drag to reorder
+- **Achievements** - curated selection from the 42 API with difficulty tier badges (easy, medium, hard, challenge)
+- **42 Journey tab** - toggleable second view with a year-by-year project activity heatmap, 42 skills as bars or radar chart, and a full validated project list grouped by year with collapsible descriptions
+- **Light / dark mode** - visitors can toggle; you choose the default
 
 ### 🎴 Stats badge - embed live stats in your GitHub README
 
-- Login, campus, cursus, grade, level progress bar
-- Coalition colors + 5 custom themes (Midnight, Carbon, Rose, Neon) and a Gold theme unlocked at level 21
-- BlackHole countdown, or student / piscine period dates
-- Optional profile photo, display name, email, validated project count
-- Individual project score badge for each project
+- Login, campus, cursus, grade, level progress bar, 42 logo
+- Coalition colors + 6 custom themes (Piscine, Neutral, Midnight, Carbon, Rose, Neon) and a Gold theme unlocked at level 21
+- BlackHole countdown with color-coded urgency, or student / piscine period dates
+- Optional profile photo (42 campus or custom upload), display name, email, validated project count
+- Credly certification badges in the header area (max 4)
+- Individual project score badge for each project (success / fail / subscribed)
+- Copyable URL, Markdown, and HTML embed snippets
 
 ## 👀 Preview
 
@@ -50,7 +57,7 @@ Generate a clean, recruiter-friendly CV page at `42cv.dev/your-login`:
 ## 🤓 Usage
 
 1. Go to <https://42cv.dev/> and sign in with your 42 account
-2. **CV:** enable *Make profile public*, fill in your contact info and select achievements - your CV is live at `42cv.dev/your-login`
+2. **CV:** enable *Make profile public*, fill in your contact info, add work experience, skill tags, select achievements and featured projects - your CV is live at `42cv.dev/your-login`
 3. **Badge:** copy the URL or markdown snippet and paste it into your GitHub README
 
 ## 🛠️ Self-hosting
@@ -68,12 +75,13 @@ See `.env.example` for the required environment variables (42 API credentials, d
 
 ## 🧰 Tech stack
 
-- `Next.js 14` / `React 18` - pages router, API routes for SVG generation
-- `Prisma 5` - ORM with `PostgreSQL` (Neon in production)
-- `NextAuth` - authentication via 42 OAuth
-- `Tailwind CSS` - UI styling
+- `Next.js 16` / `React 19` - Pages Router with Turbopack, API routes for SVG generation
+- `Prisma 7` - ORM with `PostgreSQL` (Neon in production), PrismaPg driver adapter
+- `NextAuth v4` - authentication via 42 OAuth
+- `Tailwind CSS 4` - CSS-first configuration
 - `ReactDOMServer` - renders React components to static SVG markup
-- `42 API` - fetches user data, coalitions, projects
+- `Cloudinary` - profile photo upload and storage
+- `42 API` - fetches user data, coalitions, projects with rate-limited queue
 
 ## ❓ FAQ
 
@@ -88,19 +96,9 @@ Yes, deploy your own instance (see Self-hosting) and update the badge URLs to po
 
 ## 🗂️ About this project
 
-This started as a revival of **[badge42](https://github.com/JaeSeoKim/badge42)**, originally created by [JaeSeoKim](https://github.com/JaeSeoKim) in 2020.
+Forked from **[badge42](https://github.com/JaeSeoKim/badge42)** by [JaeSeoKim](https://github.com/JaeSeoKim), which generated 42 stats badges for GitHub READMEs. The original service went offline in 2023 and the codebase was outdated (Next.js 12, React 17, Prisma 3).
 
-The original service went down in early 2023: the maintainer was serving in the military and the Vercel free tier limits caused the service to go offline. The codebase had also accumulated breaking changes across three years of dependency drift (Next.js 12, React 17, Prisma 3).
-
-I started by forking it - full dependency upgrade, rewrote and redesigned the badge, fixed the broken bits, redeployed. But then I kept going. The CV page turned out to be more useful than the badge, and there's a lot more planned. What began as a revival is now its own thing.
-
-**Changes from the original:**
-- `Next.js 12 → 14`, `React 17 → 18`, `Prisma 3 → 5`
-- `MySQL` → `PostgreSQL` (Neon)
-- Fixed broken `42 API` compatibility
-- Fixed SVG badge animations (CSS was not rendering in served images)
-- Added public CV / profile page
-- Rebranded to `42cv.dev`
+I upgraded the stack, fixed and redesigned the badge, and kept building from there. The CV page, dashboard, journey view, certifications, and everything else grew out of that original foundation.
 
 ## 👥 Original Contributors
 
