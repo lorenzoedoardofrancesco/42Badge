@@ -1555,7 +1555,7 @@ const Home = () => {
                   <label className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-neutral-200">Show 42 Journey tab</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">Display the activity heatmap and 42 stats tab on your CV. Only visible when the Overview is active.</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">Show the Journey tab on your CV. Only visible when Resume is active.</p>
                     </div>
                     <button onClick={async () => { const next = !isDisplayJourney; setIsDisplayJourney(next); await patchMe({ isDisplayJourney: next ? "true" : "false" }); }}
                       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${isDisplayJourney ? "bg-green-600" : "bg-neutral-700"}`}

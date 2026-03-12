@@ -58,5 +58,5 @@ export function formatDateRange(startDate: string | null, endDate: string | null
     const date = new Date(parseInt(year), parseInt(month) - 1);
     return date.toLocaleDateString("en", { month: "short", year: "numeric" });
   };
-  return `${fmt(startDate)} – ${endDate ? fmt(endDate) : "Present"}`;
+  return `${fmt(startDate)} - ${endDate ? fmt(endDate) : "Present"}`;
 }
