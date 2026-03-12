@@ -57,6 +57,7 @@ type StatsOptionsProps = {
   setIsDisplayEmail: (value: boolean) => void;
   setIsDisplayPhoto: (value: boolean) => void;
   setIsDisplayProjectCount: (value: boolean) => void;
+  patchMe: (updates: Record<string, any>) => Promise<void>;
   onError: (msg: string) => void;
 };
 
@@ -69,15 +70,14 @@ const StatsOptions = ({
   setIsDisplayName,
   setIsDisplayPhoto,
   setIsDisplayProjectCount,
+  patchMe,
   onError,
 }: StatsOptionsProps) => {
   const [isFetching, setIsFetching] = useState(false);
   const updateOption = useCallback(async () => {
     setIsFetching(true);
     try {
-      await axios.patch("/api/v2/me", {
-        isDisplayEmail: isDisplayEmail ? "true" : "false",
-        isDisplayName: isDisplayName ? "true" : "false",
+      await patchMe({
         isDisplayPhoto: isDisplayPhoto ? "true" : "false",
         isDisplayProjectCount: isDisplayProjectCount ? "true" : "false",
       });
@@ -90,7 +90,7 @@ const StatsOptions = ({
       }
     }
     setIsFetching(false);
-  }, [isDisplayEmail, isDisplayName, isDisplayPhoto, isDisplayProjectCount, onError]);
+  }, [isDisplayPhoto, isDisplayProjectCount, patchMe, onError]);
 
   return (
     <div>
@@ -780,6 +780,15 @@ const Home = () => {
   const [isDisplayEmail, setIsDisplayEmail] = useState(data.isDisplayEmail);
   const [isDisplayPhoto, setIsDisplayPhoto] = useState(data.isDisplayPhoto);
   const { show: showModal, node: modalNode } = useModal();
+
+  const patchMe = useCallback(async (updates: Record<string, any>) => {
+    await axios.patch("/api/v2/me", {
+      isDisplayEmail: isDisplayEmail ? "true" : "false",
+      isDisplayName: isDisplayName ? "true" : "false",
+      ...updates,
+    });
+  }, [isDisplayEmail, isDisplayName]);
+
   const [photoMode, setPhotoMode] = useState<"none" | "42campus" | "custom">((data as any).photoMode ?? "none");
   const [customPhotoUrl, setCustomPhotoUrl] = useState<string>((data as any).customPhotoUrl ?? "");
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -809,6 +818,19 @@ const Home = () => {
   const [credlyBadges, setCredlyBadges] = useState<{ id: string; name?: string; imageUrl?: string; issuer?: string; label?: string }[]>(((data as any).credlyBadges as any[]) ?? []);
   const [credlyInput, setCredlyInput] = useState("");
   const [credlyAdding, setCredlyAdding] = useState(false);
+  const addCredlyBadge = useCallback(async (input: string, showErrors: boolean) => {
+    const id = parseCredlyBadgeId(input);
+    if (!id) { if (showErrors) showModal({ title: "Invalid badge", message: "Could not find a valid Credly badge ID.", icon: "alert" }); return; }
+    if (credlyBadges.some((b) => b.id === id)) { if (showErrors) showModal({ title: "Already added", message: "This badge is already on your CV.", icon: "info" }); return; }
+    setCredlyAdding(true);
+    let meta: { name?: string; imageUrl?: string; issuer?: string } = {};
+    try { const r = await axios.get(`/api/v2/credly-badge?id=${id}`); meta = r.data; } catch {}
+    const next = [...credlyBadges, { id, ...meta }];
+    setCredlyBadges(next);
+    setCredlyInput("");
+    await patchMe({ credlyBadges: next });
+    setCredlyAdding(false);
+  }, [credlyBadges, patchMe, showModal]);
   const [bioPreview, setBioPreview] = useState(false);
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [expLoading, setExpLoading] = useState(true);
@@ -988,11 +1010,7 @@ const Home = () => {
               onClick={async () => {
                 const next = !isPublicProfile;
                 setIsPublicProfile(next);
-                await axios.patch("/api/v2/me", {
-                  isDisplayEmail: isDisplayEmail ? "true" : "false",
-                  isDisplayName: isDisplayName ? "true" : "false",
-                  isPublicProfile: next ? "true" : "false",
-                });
+                await patchMe({ isPublicProfile: next ? "true" : "false" });
               }}
               className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
                 isPublicProfile ? "bg-green-600" : "bg-neutral-700"
@@ -1066,7 +1084,7 @@ const Home = () => {
                         <button key={value}
                           onClick={async () => {
                             setPhotoMode(value);
-                            await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", photoMode: value });
+                            await patchMe({ photoMode: value });
                           }}
                           className={`px-3 py-1.5 text-xs font-medium transition-colors ${photoMode === value ? "bg-neutral-600 text-white" : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"}`}
                         >
@@ -1147,7 +1165,7 @@ const Home = () => {
                         value={bio}
                         placeholder="e.g. Systems engineer specialised in C/C++, looking for a backend role."
                         onChange={(e) => setBio(e.target.value)}
-                        onBlur={async () => { await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", bio }); }}
+                        onBlur={async () => { await patchMe({ bio }); }}
                         rows={6}
                         maxLength={400}
                         className="w-full text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-2 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600 resize-none"
@@ -1171,7 +1189,7 @@ const Home = () => {
                         <div key={key} className="flex items-center gap-3">
                           <span className="text-xs text-neutral-400 w-20 shrink-0">{label}</span>
                           <input type="text" value={value} placeholder={placeholder} onChange={(e) => set(e.target.value)}
-                            onBlur={async () => { await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", [key]: value }); }}
+                            onBlur={async () => { await patchMe({ [key]: value }); }}
                             className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-1.5 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
                           />
                         </div>
@@ -1192,7 +1210,7 @@ const Home = () => {
                       value={skillTags}
                       onChange={async (next) => {
                         setSkillTags(next);
-                        await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", skillTags: next });
+                        await patchMe({ skillTags: next });
                       }}
                     />
                   </div>
@@ -1212,7 +1230,7 @@ const Home = () => {
                               <input type="checkbox" checked={checked} onChange={async () => {
                                 const next = checked ? selectedAchievementIds.filter((id) => id !== a.id) : [...selectedAchievementIds, a.id];
                                 setSelectedAchievementIds(next);
-                                await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", selectedAchievementIds: next });
+                                await patchMe({ selectedAchievementIds: next });
                               }} className="mt-0.5 accent-green-500 shrink-0" />
                               <div>
                                 <p className="text-xs font-medium text-neutral-300 group-hover:text-white transition-colors">{a.name}</p>
@@ -1302,7 +1320,7 @@ const Home = () => {
                               onChange={async () => {
                                 const next = checked ? featuredProjectIds.filter((id) => id !== project.id) : [...featuredProjectIds, project.id];
                                 setFeaturedProjectIds(next);
-                                await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", featuredProjectIds: next });
+                                await patchMe({ featuredProjectIds: next });
                               }}
                               className="accent-green-500 shrink-0"
                             />
@@ -1354,7 +1372,7 @@ const Home = () => {
                                   rows={2}
                                   onChange={(e) => setProjectDescriptionOverrides((prev) => ({ ...prev, [slug]: e.target.value }))}
                                   onBlur={async () => {
-                                    await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", projectDescriptionOverrides });
+                                    await patchMe({ projectDescriptionOverrides });
                                   }}
                                   className="w-full text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-2 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600 resize-none"
                                 />
@@ -1414,34 +1432,11 @@ const Home = () => {
                         disabled={credlyAdding}
                         className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-2 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600 disabled:opacity-50"
                         onKeyDown={async (e) => { if (e.key === "Enter") (document.activeElement as HTMLElement)?.blur(); }}
-                        onBlur={async () => {
-                          const id = parseCredlyBadgeId(credlyInput);
-                          if (!id || credlyBadges.some((b) => b.id === id)) return;
-                          setCredlyAdding(true);
-                          let meta: { name?: string; imageUrl?: string; issuer?: string } = {};
-                          try { const r = await axios.get(`/api/v2/credly-badge?id=${id}`); meta = r.data; } catch {}
-                          const next = [...credlyBadges, { id, ...meta }];
-                          setCredlyBadges(next);
-                          setCredlyInput("");
-                          await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", credlyBadges: next });
-                          setCredlyAdding(false);
-                        }}
+                        onBlur={() => addCredlyBadge(credlyInput, false)}
                       />
                       <button
                         disabled={credlyAdding}
-                        onClick={async () => {
-                          const id = parseCredlyBadgeId(credlyInput);
-                          if (!id) { showModal({ title: "Invalid badge", message: "Could not find a valid Credly badge ID.", icon: "alert" }); return; }
-                          if (credlyBadges.some((b) => b.id === id)) { showModal({ title: "Already added", message: "This badge is already on your CV.", icon: "info" }); return; }
-                          setCredlyAdding(true);
-                          let meta: { name?: string; imageUrl?: string; issuer?: string } = {};
-                          try { const r = await axios.get(`/api/v2/credly-badge?id=${id}`); meta = r.data; } catch {}
-                          const next = [...credlyBadges, { id, ...meta }];
-                          setCredlyBadges(next);
-                          setCredlyInput("");
-                          await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", credlyBadges: next });
-                          setCredlyAdding(false);
-                        }}
+                        onClick={() => addCredlyBadge(credlyInput, true)}
                         className="px-3 py-2 text-sm bg-neutral-700 hover:bg-neutral-600 text-white rounded-md transition-colors shrink-0 disabled:opacity-50"
                       >
                         {credlyAdding ? "…" : "Add"}
@@ -1468,7 +1463,7 @@ const Home = () => {
                                 setCredlyBadges(next);
                               }}
                               onBlur={async () => {
-                                await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", credlyBadges });
+                                await patchMe({ credlyBadges });
                               }}
                               className="mt-1 w-full text-xs bg-neutral-900 border border-neutral-700 text-neutral-300 rounded px-2 py-1 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
                             />
@@ -1477,7 +1472,7 @@ const Home = () => {
                             onClick={async () => {
                               const next = credlyBadges.filter((_, j) => j !== i);
                               setCredlyBadges(next);
-                              await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", credlyBadges: next });
+                              await patchMe({ credlyBadges: next });
                             }}
                             className="shrink-0 text-neutral-500 hover:text-red-400 transition-colors"
                             title="Remove"
@@ -1502,7 +1497,7 @@ const Home = () => {
                     </div>
                     <div className="flex rounded-lg border border-neutral-700 overflow-hidden shrink-0">
                       {([{ value: false, icon: "☀️", label: "Light" }, { value: true, icon: "🌙", label: "Dark" }] as const).map(({ value, icon, label }) => (
-                        <button key={label} onClick={async () => { setDefaultDarkMode(value); await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", defaultDarkMode: value ? "true" : "false" }); }}
+                        <button key={label} onClick={async () => { setDefaultDarkMode(value); await patchMe({ defaultDarkMode: value ? "true" : "false" }); }}
                           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${defaultDarkMode === value ? "bg-neutral-600 text-white" : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"}`}
                         >
                           <span>{icon}</span><span>{label}</span>
@@ -1528,7 +1523,7 @@ const Home = () => {
                             <p className="text-sm text-neutral-200">{label}</p>
                             <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>
                           </div>
-                          <button onClick={async () => { const next = !value; set(next); await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", [key]: next ? "true" : "false" }); }}
+                          <button onClick={async () => { const next = !value; set(next); await patchMe({ [key]: next ? "true" : "false" }); }}
                             className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${value ? "bg-green-600" : "bg-neutral-700"}`}
                           >
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? "translate-x-6" : "translate-x-1"}`} />
@@ -1546,7 +1541,7 @@ const Home = () => {
                       <p className="text-sm font-medium text-neutral-200">Show outstanding votes</p>
                       <p className="text-xs text-neutral-500 mt-0.5">Display star ratings on validated projects.</p>
                     </div>
-                    <button onClick={async () => { const next = !isDisplayOutstandingVotes; setIsDisplayOutstandingVotes(next); await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", isDisplayOutstandingVotes: next ? "true" : "false" }); }}
+                    <button onClick={async () => { const next = !isDisplayOutstandingVotes; setIsDisplayOutstandingVotes(next); await patchMe({ isDisplayOutstandingVotes: next ? "true" : "false" }); }}
                       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${isDisplayOutstandingVotes ? "bg-green-600" : "bg-neutral-700"}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isDisplayOutstandingVotes ? "translate-x-6" : "translate-x-1"}`} />
@@ -1638,6 +1633,7 @@ const Home = () => {
           setIsDisplayName={setIsDisplayName}
           setIsDisplayPhoto={setIsDisplayPhoto}
           setIsDisplayProjectCount={setIsDisplayProjectCount}
+          patchMe={patchMe}
           onError={(msg) => showModal({ title: "Error", message: msg, icon: "alert" })}
         />
 
