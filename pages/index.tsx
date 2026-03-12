@@ -825,7 +825,15 @@ const Home = () => {
     if (credlyBadges.some((b) => b.id === id)) { if (showErrors) showModal({ title: "Already added", message: "This badge is already on your CV.", icon: "info" }); return; }
     setCredlyAdding(true);
     let meta: { name?: string; imageUrl?: string; issuer?: string } = {};
-    try { const r = await axios.get(`/api/v2/credly-badge?id=${id}`); meta = r.data; } catch {}
+    try {
+      const r = await axios.get(`/api/v2/credly-badge?id=${id}`);
+      meta = r.data;
+    } catch (err: any) {
+      setCredlyAdding(false);
+      const msg = err?.response?.data?.message ?? "Failed to fetch badge.";
+      if (showErrors) showModal({ title: err?.response?.status === 403 ? "Badge ownership mismatch" : "Failed to fetch badge", message: msg, icon: "alert" });
+      return;
+    }
     const next = [...credlyBadges, { id, ...meta }];
     setCredlyBadges(next);
     setCredlyInput("");
