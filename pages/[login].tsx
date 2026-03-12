@@ -69,6 +69,7 @@ type PublicProfile = {
   projectGithubLinks: Record<string, string>;
   projectDescriptionOverrides: Record<string, string>;
   workExperiences: WorkExperience[];
+  credlyBadges: { id: string; name?: string; imageUrl?: string; issuer?: string; label?: string }[];
   featuredProjectIds: number[];
   skillTags: SkillTag[];
 };
@@ -517,7 +518,7 @@ export default function CVPage({
     });
   };
 
-  const hasOverview = profile.workExperiences.length > 0 || profile.featuredProjectIds.length > 0;
+  const hasOverview = profile.workExperiences.length > 0 || profile.featuredProjectIds.length > 0 || profile.credlyBadges.length > 0;
   const [view, setView] = useState<"overview" | "full">(hasOverview ? "overview" : "full");
 
   const mainCursus =
@@ -1157,6 +1158,50 @@ export default function CVPage({
                           </div>
                         )}
                       </div>
+                    </FadeIn>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {profile.credlyBadges.length > 0 && (
+              <div>
+                <FadeIn delay={160}>
+                  <h2 className="text-2xl font-bold mb-5" style={{ fontFamily: "'HelveticaNeue', sans-serif", color: t.text, letterSpacing: "0.02em" }}>
+                    Certifications
+                  </h2>
+                </FadeIn>
+                <div className="flex flex-wrap gap-4">
+                  {profile.credlyBadges.map((badge, i) => (
+                    <FadeIn key={badge.id} delay={160 + i * 60}>
+                      <a
+                        href={`https://www.credly.com/badges/${badge.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col items-center gap-3 p-5 rounded-xl border transition-colors hover:border-opacity-80 w-[160px] sm:w-[180px] no-underline group"
+                        style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg, boxShadow: t.cardShadow, minHeight: "260px" }}
+                      >
+                        <div className="flex items-center justify-center w-28 h-28 shrink-0">
+                          {badge.imageUrl ? (
+                            <img src={badge.imageUrl} alt={badge.name ?? "Badge"} className="w-full h-full object-contain" />
+                          ) : (
+                            <div className="w-full h-full rounded-full flex items-center justify-center" style={{ backgroundColor: `${accent}18` }}>
+                              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.5"><circle cx="12" cy="8" r="4"/><path d="M8 14l-2 7 6-3 6 3-2-7"/></svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 text-center min-w-0 w-full">
+                          <p className="text-xs font-semibold leading-snug" style={{ color: t.text, fontFamily: "'HelveticaNeue', sans-serif" }}>
+                            {badge.label || badge.name || "View Badge"}
+                          </p>
+                          {badge.issuer && (
+                            <p className="text-[10px] mt-0.5" style={{ color: t.textMuted }}>{badge.issuer}</p>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: accent }}>
+                          Verify ↗
+                        </span>
+                      </a>
                     </FadeIn>
                   ))}
                 </div>
@@ -1871,6 +1916,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params, req }) =>
       projectGithubLinks: {},
       projectDescriptionOverrides: (user as any).projectDescriptionOverrides ?? {},
       workExperiences: [],  // populated below
+      credlyBadges: ((user as any).credlyBadges as { id: string; label?: string }[]) ?? [],
       featuredProjectIds: (user as any).featuredProjectIds ?? [],
       skillTags: ((user as any).skillTags as any[] ?? []).map((t: any) => ({
         category: t.category,

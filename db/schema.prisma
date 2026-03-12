@@ -65,6 +65,7 @@ model User {
   featuredProjectIds              Int[]   @default([])
   skillTags                       Json?
   projectDescriptionOverrides     Json?
+  credlyBadges                    Json?
   workExperiences                 WorkExperience[]
 }
 

@@ -497,6 +497,12 @@ const SkillTagsEditor = ({
   );
 };
 
+function parseCredlyBadgeId(input: string): string | null {
+  // Accept: full embed HTML, Credly URL, or bare UUID
+  const idMatch = input.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return idMatch ? idMatch[0] : null;
+}
+
 function renderMdPreview(text: string): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
   return parts.map((part, i) => {
@@ -719,7 +725,10 @@ const Home = () => {
   const [featuredProjectIds, setFeaturedProjectIds] = useState<number[]>((data as any).featuredProjectIds ?? []);
   const [projectDescriptionOverrides, setProjectDescriptionOverrides] = useState<Record<string, string>>((data as any).projectDescriptionOverrides ?? {});
   const [descOverridePreviews, setDescOverridePreviews] = useState<Record<string, boolean>>({});
-  const [activeTab, setActiveTab] = useState<"profile" | "experiences" | "projects" | "settings">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "experiences" | "projects" | "certifications" | "settings">("profile");
+  const [credlyBadges, setCredlyBadges] = useState<{ id: string; name?: string; imageUrl?: string; issuer?: string; label?: string }[]>(((data as any).credlyBadges as any[]) ?? []);
+  const [credlyInput, setCredlyInput] = useState("");
+  const [credlyAdding, setCredlyAdding] = useState(false);
   const [bioPreview, setBioPreview] = useState(false);
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [expLoading, setExpLoading] = useState(true);
@@ -946,6 +955,7 @@ const Home = () => {
                   { id: "profile", label: "Profile" },
                   { id: "experiences", label: "Experiences" },
                   { id: "projects", label: "Projects" },
+                  { id: "certifications", label: "Certifications" },
                   { id: "settings", label: "Settings" },
                 ] as const).map(({ id, label }) => (
                   <button
@@ -1308,6 +1318,98 @@ const Home = () => {
                       })}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* ── CERTIFICATIONS TAB ── */}
+              {activeTab === "certifications" && (
+                <div className="space-y-6 pt-1">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-200 mb-1">Credly Badges</p>
+                    <p className="text-xs text-neutral-500 mb-3">Paste your Credly embed code, badge URL, or badge ID. Appears on your CV between Work Experience and Projects.</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={credlyInput}
+                        onChange={(e) => setCredlyInput(e.target.value)}
+                        placeholder='Paste embed HTML, URL, or badge ID…'
+                        disabled={credlyAdding}
+                        className="flex-1 text-sm bg-neutral-800 border border-neutral-700 text-neutral-200 rounded-md px-3 py-2 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600 disabled:opacity-50"
+                        onKeyDown={async (e) => { if (e.key === "Enter") (document.activeElement as HTMLElement)?.blur(); }}
+                        onBlur={async () => {
+                          const id = parseCredlyBadgeId(credlyInput);
+                          if (!id || credlyBadges.some((b) => b.id === id)) return;
+                          setCredlyAdding(true);
+                          let meta: { name?: string; imageUrl?: string; issuer?: string } = {};
+                          try { const r = await axios.get(`/api/v2/credly-badge?id=${id}`); meta = r.data; } catch {}
+                          const next = [...credlyBadges, { id, ...meta }];
+                          setCredlyBadges(next);
+                          setCredlyInput("");
+                          await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", credlyBadges: next });
+                          setCredlyAdding(false);
+                        }}
+                      />
+                      <button
+                        disabled={credlyAdding}
+                        onClick={async () => {
+                          const id = parseCredlyBadgeId(credlyInput);
+                          if (!id) { alert("Could not find a valid Credly badge ID."); return; }
+                          if (credlyBadges.some((b) => b.id === id)) { alert("Badge already added."); return; }
+                          setCredlyAdding(true);
+                          let meta: { name?: string; imageUrl?: string; issuer?: string } = {};
+                          try { const r = await axios.get(`/api/v2/credly-badge?id=${id}`); meta = r.data; } catch {}
+                          const next = [...credlyBadges, { id, ...meta }];
+                          setCredlyBadges(next);
+                          setCredlyInput("");
+                          await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", credlyBadges: next });
+                          setCredlyAdding(false);
+                        }}
+                        className="px-3 py-2 text-sm bg-neutral-700 hover:bg-neutral-600 text-white rounded-md transition-colors shrink-0 disabled:opacity-50"
+                      >
+                        {credlyAdding ? "…" : "Add"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {credlyBadges.length > 0 && (
+                    <div className="space-y-3">
+                      {credlyBadges.map((badge, i) => (
+                        <div key={badge.id} className="flex items-center gap-3 p-3 bg-neutral-800 border border-neutral-700 rounded-lg">
+                          {badge.imageUrl && (
+                            <img src={badge.imageUrl} alt={badge.name ?? badge.id} className="w-10 h-10 rounded object-contain shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-neutral-300 truncate">{badge.name ?? badge.id}</p>
+                            {badge.issuer && <p className="text-[10px] text-neutral-500 truncate">{badge.issuer}</p>}
+                            <input
+                              type="text"
+                              value={badge.label ?? ""}
+                              placeholder="Custom label (optional)"
+                              onChange={(e) => {
+                                const next = credlyBadges.map((b, j) => j === i ? { ...b, label: e.target.value } : b);
+                                setCredlyBadges(next);
+                              }}
+                              onBlur={async () => {
+                                await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", credlyBadges });
+                              }}
+                              className="mt-1 w-full text-xs bg-neutral-900 border border-neutral-700 text-neutral-300 rounded px-2 py-1 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-600"
+                            />
+                          </div>
+                          <button
+                            onClick={async () => {
+                              const next = credlyBadges.filter((_, j) => j !== i);
+                              setCredlyBadges(next);
+                              await axios.patch("/api/v2/me", { isDisplayEmail: isDisplayEmail ? "true" : "false", isDisplayName: isDisplayName ? "true" : "false", credlyBadges: next });
+                            }}
+                            className="shrink-0 text-neutral-500 hover:text-red-400 transition-colors"
+                            title="Remove"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

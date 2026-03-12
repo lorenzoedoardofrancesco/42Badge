@@ -80,7 +80,7 @@ class ValidateError extends Error {
 
 const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
-    const { isDisplayEmail, isDisplayName, isDisplayPhoto, isDisplayProjectCount, isPublicProfile, isDisplayOutstandingVotes, selectedAchievementIds, githubUrl, linkedinUrl, address, phone, defaultDarkMode, isDisplayCampusCohortRank, isDisplayCohortRank, isDisplayAllTimeRank, bio, featuredProjectIds, skillTags, projectDescriptionOverrides, photoMode } = req.body as {
+    const { isDisplayEmail, isDisplayName, isDisplayPhoto, isDisplayProjectCount, isPublicProfile, isDisplayOutstandingVotes, selectedAchievementIds, githubUrl, linkedinUrl, address, phone, defaultDarkMode, isDisplayCampusCohortRank, isDisplayCohortRank, isDisplayAllTimeRank, bio, featuredProjectIds, skillTags, projectDescriptionOverrides, credlyBadges, photoMode } = req.body as {
       isDisplayEmail?: string;
       isDisplayName?: string;
       isDisplayPhoto?: string;
@@ -101,6 +101,7 @@ const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
       featuredProjectIds?: number[];
       skillTags?: any;
       projectDescriptionOverrides?: Record<string, string>;
+      credlyBadges?: { id: string; label?: string }[];
     };
     if (!isDisplayEmail || !isDisplayName)
       throw new ValidateError(
@@ -149,6 +150,7 @@ const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
         }),
         ...(skillTags !== undefined && { skillTags }),
         ...(projectDescriptionOverrides !== undefined && { projectDescriptionOverrides }),
+        ...(credlyBadges !== undefined && { credlyBadges }),
         ...(photoMode !== undefined && { photoMode }),
       },
     });
