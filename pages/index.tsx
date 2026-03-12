@@ -57,6 +57,7 @@ type StatsOptionsProps = {
   setIsDisplayEmail: (value: boolean) => void;
   setIsDisplayPhoto: (value: boolean) => void;
   setIsDisplayProjectCount: (value: boolean) => void;
+  onError: (msg: string) => void;
 };
 
 const StatsOptions = ({
@@ -68,6 +69,7 @@ const StatsOptions = ({
   setIsDisplayName,
   setIsDisplayPhoto,
   setIsDisplayProjectCount,
+  onError,
 }: StatsOptionsProps) => {
   const [isFetching, setIsFetching] = useState(false);
   const updateOption = useCallback(async () => {
@@ -82,13 +84,13 @@ const StatsOptions = ({
     } catch (error) {
       console.error(error);
       if (axios.isAxiosError(error) && error.response) {
-        alert(error.response.data.message);
+        onError(error.response.data.message);
       } else if (error instanceof Error) {
-        alert(error.message);
+        onError(error.message);
       }
     }
     setIsFetching(false);
-  }, [isDisplayEmail, isDisplayName, isDisplayPhoto, isDisplayProjectCount]);
+  }, [isDisplayEmail, isDisplayName, isDisplayPhoto, isDisplayProjectCount, onError]);
 
   return (
     <div>
@@ -497,6 +499,83 @@ const SkillTagsEditor = ({
   );
 };
 
+// ─── Modal ────────────────────────────────────────────────────────────────────
+
+type ModalConfig = {
+  title: string;
+  message?: string;
+  icon?: "alert" | "trash" | "info";
+  confirmLabel?: string;
+  confirmVariant?: "red" | "green" | "neutral";
+  cancelLabel?: string;
+  onConfirm?: () => void;
+};
+
+function AppModal({ config, onClose }: { config: ModalConfig; onClose: () => void }) {
+  const { title, message, icon = "info", confirmLabel, confirmVariant = "neutral", cancelLabel, onConfirm } = config;
+  const isAlert = !onConfirm;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-sm mx-4 rounded-xl border bg-neutral-900 border-neutral-700 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start gap-3 mb-5">
+          {icon === "trash" && (
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </div>
+          )}
+          {icon === "alert" && (
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/20">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+          )}
+          {icon === "info" && (
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/10 border border-blue-500/20">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-semibold text-neutral-100">{title}</p>
+            {message && <p className="text-xs text-neutral-500 mt-0.5">{message}</p>}
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end">
+          {!isAlert && (
+            <button onClick={onClose} className="px-4 py-1.5 text-xs rounded-md border border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600 transition-colors">
+              {cancelLabel ?? "Cancel"}
+            </button>
+          )}
+          <button
+            onClick={() => { onConfirm?.(); onClose(); }}
+            className={`px-4 py-1.5 text-xs rounded-md font-medium transition-colors text-white ${
+              confirmVariant === "red" ? "bg-red-600 hover:bg-red-500" :
+              confirmVariant === "green" ? "bg-green-600 hover:bg-green-500" :
+              "bg-neutral-700 hover:bg-neutral-600"
+            }`}
+          >
+            {confirmLabel ?? "OK"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function useModal() {
+  const [modal, setModal] = useState<ModalConfig | null>(null);
+  const show = useCallback((config: ModalConfig) => setModal(config), []);
+  const hide = useCallback(() => setModal(null), []);
+  const node = modal ? <AppModal config={modal} onClose={hide} /> : null;
+  return { show, node };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function parseCredlyBadgeId(input: string): string | null {
   // Accept: full embed HTML, Credly URL, or bare UUID
   const idMatch = input.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
@@ -700,6 +779,7 @@ const Home = () => {
   const [isDisplayName, setIsDisplayName] = useState(data.isDisplayName);
   const [isDisplayEmail, setIsDisplayEmail] = useState(data.isDisplayEmail);
   const [isDisplayPhoto, setIsDisplayPhoto] = useState(data.isDisplayPhoto);
+  const { show: showModal, node: modalNode } = useModal();
   const [photoMode, setPhotoMode] = useState<"none" | "42campus" | "custom">((data as any).photoMode ?? "none");
   const [customPhotoUrl, setCustomPhotoUrl] = useState<string>((data as any).customPhotoUrl ?? "");
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -733,7 +813,6 @@ const Home = () => {
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [expLoading, setExpLoading] = useState(true);
   const [showAddExp, setShowAddExp] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editingExpId, setEditingExpId] = useState<string | null>(null);
   const [expForm, setExpForm] = useState<{
     type: "FORTY_TWO" | "EXTERNAL";
@@ -788,7 +867,6 @@ const Home = () => {
   const deleteExp = async (id: string) => {
     await axios.delete(`/api/v2/me/work-experiences/${id}`);
     setWorkExperiences((prev) => prev.filter((e) => e.id !== id));
-    setConfirmDeleteId(null);
   };
 
   const startEditExp = (exp: WorkExperience) => {
@@ -1021,7 +1099,7 @@ const Home = () => {
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
-                                if (file.size > 200 * 1024) { alert("Image must be under 200 KB."); return; }
+                                if (file.size > 200 * 1024) { showModal({ title: "File too large", message: "Image must be under 200 KB.", icon: "alert" }); return; }
                                 setPhotoUploading(true);
                                 const reader = new FileReader();
                                 reader.onload = async () => {
@@ -1030,7 +1108,7 @@ const Home = () => {
                                     setCustomPhotoUrl(res.url);
                                     setPhotoMode("custom");
                                   } catch (err: any) {
-                                    alert(err?.response?.data?.message ?? "Upload failed");
+                                    showModal({ title: "Upload failed", message: err?.response?.data?.message ?? "Something went wrong.", icon: "alert" });
                                   } finally {
                                     setPhotoUploading(false);
                                   }
@@ -1186,7 +1264,7 @@ const Home = () => {
                                 </div>
                                 <div className="flex gap-2 shrink-0">
                                   <button onClick={() => startEditExp(exp)} className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">Edit</button>
-                                  <button onClick={() => setConfirmDeleteId(exp.id)} className="text-xs text-red-500 hover:text-red-400 transition-colors">Delete</button>
+                                  <button onClick={() => showModal({ title: "Delete experience", message: "This action cannot be undone.", icon: "trash", confirmLabel: "Delete", confirmVariant: "red", cancelLabel: "Cancel", onConfirm: () => deleteExp(exp.id) })} className="text-xs text-red-500 hover:text-red-400 transition-colors">Delete</button>
                                 </div>
                               </div>
                             )}
@@ -1353,8 +1431,8 @@ const Home = () => {
                         disabled={credlyAdding}
                         onClick={async () => {
                           const id = parseCredlyBadgeId(credlyInput);
-                          if (!id) { alert("Could not find a valid Credly badge ID."); return; }
-                          if (credlyBadges.some((b) => b.id === id)) { alert("Badge already added."); return; }
+                          if (!id) { showModal({ title: "Invalid badge", message: "Could not find a valid Credly badge ID.", icon: "alert" }); return; }
+                          if (credlyBadges.some((b) => b.id === id)) { showModal({ title: "Already added", message: "This badge is already on your CV.", icon: "info" }); return; }
                           setCredlyAdding(true);
                           let meta: { name?: string; imageUrl?: string; issuer?: string } = {};
                           try { const r = await axios.get(`/api/v2/credly-badge?id=${id}`); meta = r.data; } catch {}
@@ -1560,6 +1638,7 @@ const Home = () => {
           setIsDisplayName={setIsDisplayName}
           setIsDisplayPhoto={setIsDisplayPhoto}
           setIsDisplayProjectCount={setIsDisplayProjectCount}
+          onError={(msg) => showModal({ title: "Error", message: msg, icon: "alert" })}
         />
 
         {/* Code snippets */}
@@ -1637,40 +1716,7 @@ const Home = () => {
         <FeedbackForm login={data.extended42Data.login} />
       </section>
 
-      {confirmDeleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setConfirmDeleteId(null)}>
-          <div
-            className="w-full max-w-sm mx-4 rounded-xl border bg-neutral-900 border-neutral-700 p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start gap-3 mb-5">
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-neutral-100">Delete experience</p>
-                <p className="text-xs text-neutral-500 mt-0.5">This action cannot be undone.</p>
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setConfirmDeleteId(null)}
-                className="px-4 py-1.5 text-xs rounded-md border border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteExp(confirmDeleteId)}
-                className="px-4 py-1.5 text-xs rounded-md bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {modalNode}
     </Layout>
   );
 };
