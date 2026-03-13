@@ -2,7 +2,7 @@ import prisma from "../db";
 import { axiosClientFor42, get42OauthToken } from "../lib/api/42api";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const MAX_NEW_RETRIES = 10;
+const MAX_NEW_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
 
 function sleep(ms: number) {

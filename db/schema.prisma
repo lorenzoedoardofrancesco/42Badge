@@ -127,11 +127,6 @@ model RankingCache {
   checkedAt         DateTime @default(now())
 }
 
-model CronCheckpoint {
-  key     String   @id
-  data    Json
-  savedAt DateTime @updatedAt
-}
 
 model ProjectGithubLink {
   userId      String
