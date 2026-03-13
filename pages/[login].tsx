@@ -270,7 +270,11 @@ export const getServerSideProps: GetServerSideProps = async ({ params, req }) =>
 
     const profile: PublicProfile = {
       login: data.login,
-      displayname: user.isDisplayName ? data.displayname : null,
+      displayname: user.isDisplayName ? (
+        data.first_name && data.last_name
+          ? `${data.first_name} ${data.last_name}`
+          : data.usual_full_name || data.displayname
+      ) : null,
       email: user.isDisplayEmail ? data.email : null,
       profileImage,
       campus: `42${primaryCampus?.name ?? ""}`,

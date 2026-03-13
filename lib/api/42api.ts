@@ -20,7 +20,7 @@ export const axiosClientFor42 = axios.create({
   baseURL: END_POINT_42API,
 });
 
-export const axiosClientFor42Pagenation = async <Data = any, Params = any>(
+const axiosClientFor42Pagenation = async <Data = any, Params = any>(
   url: string,
   params?: Partial<PageParams> & Partial<Params>
 ) => {
@@ -45,7 +45,7 @@ axiosClientFor42.interceptors.request.use(
     return config;
   },
   (error) => {
-    Promise.reject(error);
+    return Promise.reject(error);
   }
 );
 
@@ -79,12 +79,12 @@ axiosClientFor42.interceptors.response.use(
   }
 );
 
-export type PageParams = {
+type PageParams = {
   "page[number]": number;
   "page[size]": number;
 };
 
-export type PageHeader = {
+type PageHeader = {
   "x-per-page": string;
   "x-page": string;
   "x-total": string;
@@ -107,7 +107,7 @@ export type User = UserBase & {
   campus_users: CampusUser[];
 };
 
-export type UserBase = {
+type UserBase = {
   id: number;
   email: string;
   login: string;
@@ -142,20 +142,20 @@ export type UserBase = {
   "is_launched?": boolean;
 };
 
-export type Skill = {
+type Skill = {
   id: number;
   name: string;
   level: number;
 };
 
-export type Cursus = {
+type Cursus = {
   id: number;
   created_at: string;
   name: string;
   slug: string;
 };
 
-export type CursusUser = {
+type CursusUser = {
   id: number;
   grade?: string;
   level: number;
@@ -187,14 +187,14 @@ export type ProjectUser = {
   updated_at: string;
 };
 
-export type Project = {
+type Project = {
   id: number;
   name: string;
   slug: string;
   parent_id?: number;
 };
 
-export type Achievement = {
+type Achievement = {
   id: number;
   name: string;
   description: string;
@@ -208,7 +208,7 @@ export type Achievement = {
   achievements: string[];
 };
 
-export type Title = {
+type Title = {
   id: number;
   /**
    * Substituting the string corresponding to `%login` and using it.
@@ -216,7 +216,7 @@ export type Title = {
   name: string;
 };
 
-export type TitleUser = {
+type TitleUser = {
   id: number;
   user_id: number;
   title_id: number;
@@ -225,7 +225,7 @@ export type TitleUser = {
   updated_at: string;
 };
 
-export type Campus = {
+type Campus = {
   id: number;
   name: string;
   time_zone: string;
@@ -247,13 +247,13 @@ export type Campus = {
   default_hidden_phone: boolean;
 };
 
-export type Language = {
+type Language = {
   id: number;
   name: string;
   identifier: string;
 };
 
-export type CampusUser = {
+type CampusUser = {
   id: number;
   user_id: number;
   campus_id: number;
@@ -273,54 +273,18 @@ export type Coalition = {
   user_id: number;
 };
 
-export type Get42OauthToken = {
+type Get42OauthToken = {
   access_token: string;
   expires_in: number;
   created_at: number;
 };
 
-export const get42OauthToken = (params?: Partial<PageParams>) => {
+export const get42OauthToken = () => {
   return axios.post<Get42OauthToken>(`${END_POINT_42API}/oauth/token`, {
     grant_type: "client_credentials",
     client_id: process.env.FORTY_TWO_CLIENT_ID,
     client_secret: process.env.FORTY_TWO_CLIENT_SECRET,
   });
-};
-
-export const get42Skills = (params?: Partial<PageParams>) => {
-  return queue.add(() =>
-    axiosClientFor42Pagenation<Skill[]>("/v2/skills", params)
-  );
-};
-
-export const get42Campus = (params?: Partial<PageParams>) => {
-  return queue.add(() =>
-    axiosClientFor42Pagenation<Campus[]>("/v2/campus", params)
-  );
-};
-
-export const get42Languages = (params?: Partial<PageParams>) => {
-  return queue.add(() =>
-    axiosClientFor42Pagenation<Language[]>("/v2/languages", params)
-  );
-};
-
-export const get42Cursus = (params?: Partial<PageParams>) => {
-  return queue.add(() =>
-    axiosClientFor42Pagenation<Cursus[]>("/v2/cursus", params)
-  );
-};
-
-export const get42Achievements = (params?: Partial<PageParams>) => {
-  return queue.add(() =>
-    axiosClientFor42Pagenation<Achievement[]>("/v2/achievements", params)
-  );
-};
-
-export const get42Coalitions = (params?: Partial<PageParams>) => {
-  return queue.add(() =>
-    axiosClientFor42Pagenation<Coalition[]>(`/v2/coalitions`, params)
-  );
 };
 
 export const get42User = (id: string | number) => {

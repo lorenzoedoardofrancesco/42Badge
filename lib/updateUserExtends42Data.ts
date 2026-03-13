@@ -13,7 +13,7 @@ export class UserNotFound extends Error {
   constructor() {
     super();
     this.name = "UserNotFound";
-    this.message = "User Not Found. invaild id or email...";
+    this.message = "User Not Found. Invalid id or email.";
   }
 }
 

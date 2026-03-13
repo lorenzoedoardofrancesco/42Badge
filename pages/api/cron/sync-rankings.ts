@@ -3,21 +3,19 @@ import crypto from "crypto";
 import prisma from "../../../db";
 import { axiosClientFor42, queue } from "../../../lib/api/42api";
 
-// ─── Checkpoint (resume on crash/timeout) ────────────────────────────────────
-
 const CHECKPOINT_KEY = "rankings";
 const CHECKPOINT_TTL_MS = 4 * 60 * 60 * 1000; // discard if older than 4h
 
 type Entry = { login: string; level: number; poolYear: string };
 
 type Checkpoint = {
-  entries: Entry[];                                                      // global entries so far
-  nextPage: number;                                                      // next global page to fetch
-  total: number;                                                         // global total hint
-  globalDone: boolean;                                                   // true once global fetch is complete
-  doneCampusIds: number[];                                               // campus IDs fully processed
+  entries: Entry[];                                                     // global entries so far
+  nextPage: number;                                                     // next global page to fetch
+  total: number;                                                        // global total hint
+  globalDone: boolean;                                                  // true once global fetch is complete
+  doneCampusIds: number[];                                              // campus IDs fully processed
   campusCohortRankMap: Record<string, { rank: number; total: number }>; // accumulated campus ranks
-  loginCampusMap: Record<string, number>;                                // login → campusId
+  loginCampusMap: Record<string, number>;                               // login → campusId
   savedAt: number;
 };
 
@@ -64,8 +62,6 @@ const TEST_ACCOUNT_GROUP = 119;
 const STAFF_GROUP = 1;
 const BLOCKED_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-// ─── Blocked logins (DB-cached, refreshed monthly) ───────────────────────────
-
 async function fetchGroupLogins(groupId: number): Promise<string[]> {
   const logins: string[] = [];
   let page = 1;
@@ -104,8 +100,6 @@ async function getBlockedLogins(): Promise<Set<string>> {
   console.log(`[rankings] Blocked logins refreshed (${logins.length})`);
   return new Set(logins);
 }
-
-// ─── API fetchers ─────────────────────────────────────────────────────────────
 
 type CampusEntry = { login: string; level: number; poolYear: string };
 
@@ -189,8 +183,6 @@ async function fetchCampusEntries(
   delete (cp as any)[cpKey];
   return entries;
 }
-
-// ─── Main handler ─────────────────────────────────────────────────────────────
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });

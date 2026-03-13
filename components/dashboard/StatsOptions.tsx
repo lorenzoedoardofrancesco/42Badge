@@ -38,7 +38,7 @@ export function StatsOptions({
     } catch (error) {
       console.error(error);
       if (axios.isAxiosError(error) && error.response) {
-        onError(error.response.data.message);
+        onError(error.response.data.error);
       } else if (error instanceof Error) {
         onError(error.message);
       }

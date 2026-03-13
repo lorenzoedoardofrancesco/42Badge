@@ -34,7 +34,7 @@ const GetHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   } catch (error) {
     if (error instanceof AuthError || error instanceof UserNotFound) {
       return res.status(401).json({
-        message: error.message,
+        error: error.message,
       });
     }
     console.error(error);
@@ -62,7 +62,7 @@ const DeleteHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   } catch (error) {
     if (error instanceof AuthError) {
       return res.status(401).json({
-        message: error.message,
+        error: error.message,
       });
     }
     console.error(error);
@@ -101,7 +101,7 @@ const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
       isDisplayJourney?: string;
       bio?: string;
       featuredProjectIds?: number[];
-      skillTags?: any;
+      skillTags?: { category: string; items: string[] }[];
       projectDescriptionOverrides?: Record<string, string>;
       credlyBadges?: { id: string; label?: string }[];
     };
@@ -113,34 +113,50 @@ const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
         ].filter(Boolean)
       );
 
-    // ── Input validation ──────────────────────────────────────────────
-    if (bio !== undefined && bio.length > 500) return res.status(400).json({ message: "Bio too long (max 500)" });
-    if (photoMode !== undefined && !["none", "42campus", "custom"].includes(photoMode)) return res.status(400).json({ message: "Invalid photoMode" });
-    if (phone !== undefined && phone && !/^[\d\s\-+().]{0,20}$/.test(phone)) return res.status(400).json({ message: "Invalid phone format" });
-    if (address !== undefined && address && address.length > 200) return res.status(400).json({ message: "Address too long (max 200)" });
-    if (githubUrl !== undefined && githubUrl && (!/^https?:\/\//i.test(githubUrl) || githubUrl.length > 2000)) return res.status(400).json({ message: "Invalid GitHub URL" });
-    if (linkedinUrl !== undefined && linkedinUrl && (!/^https?:\/\//i.test(linkedinUrl) || linkedinUrl.length > 2000)) return res.status(400).json({ message: "Invalid LinkedIn URL" });
-    if (websiteUrl !== undefined && websiteUrl && (!/^https?:\/\//i.test(websiteUrl) || websiteUrl.length > 2000)) return res.status(400).json({ message: "Invalid website URL" });
-    if (selectedAchievementIds !== undefined && (!Array.isArray(selectedAchievementIds) || selectedAchievementIds.length > 50)) return res.status(400).json({ message: "Invalid achievement IDs" });
-    if (featuredProjectIds !== undefined && (!Array.isArray(featuredProjectIds) || featuredProjectIds.length > 5)) return res.status(400).json({ message: "Max 5 featured projects" });
+    const MAX_BIO = 500;
+    const MAX_ADDRESS = 200;
+    const MAX_URL = 2000;
+    const MAX_PHONE = 20;
+    const MAX_ACHIEVEMENTS = 50;
+    const MAX_FEATURED_PROJECTS = 5;
+    const MAX_SKILL_TAGS = 20;
+    const MAX_CATEGORY_LEN = 50;
+    const MAX_ITEMS_PER_TAG = 30;
+    const MAX_ITEM_LEN = 50;
+    const MAX_OVERRIDE_LEN = 1000;
+    const MAX_CREDLY_BADGES = 4;
+    const MAX_BADGE_LABEL = 100;
+    const URL_RE = /^https?:\/\//i;
+    const UUID_RE = /^[0-9a-f-]{36}$/i;
+    const PHONE_RE = /^[\d\s\-+().]*$/;
+
+    if (bio !== undefined && bio.length > MAX_BIO) return res.status(400).json({ error: `Bio too long (max ${MAX_BIO})` });
+    if (photoMode !== undefined && !["none", "42campus", "custom"].includes(photoMode)) return res.status(400).json({ error: "Invalid photoMode" });
+    if (phone !== undefined && phone && (phone.length > MAX_PHONE || !PHONE_RE.test(phone))) return res.status(400).json({ error: "Invalid phone format" });
+    if (address !== undefined && address && address.length > MAX_ADDRESS) return res.status(400).json({ error: `Address too long (max ${MAX_ADDRESS})` });
+    if (githubUrl !== undefined && githubUrl && (!URL_RE.test(githubUrl) || githubUrl.length > MAX_URL)) return res.status(400).json({ error: "Invalid GitHub URL" });
+    if (linkedinUrl !== undefined && linkedinUrl && (!URL_RE.test(linkedinUrl) || linkedinUrl.length > MAX_URL)) return res.status(400).json({ error: "Invalid LinkedIn URL" });
+    if (websiteUrl !== undefined && websiteUrl && (!URL_RE.test(websiteUrl) || websiteUrl.length > MAX_URL)) return res.status(400).json({ error: "Invalid website URL" });
+    if (selectedAchievementIds !== undefined && (!Array.isArray(selectedAchievementIds) || selectedAchievementIds.length > MAX_ACHIEVEMENTS)) return res.status(400).json({ error: "Invalid achievement IDs" });
+    if (featuredProjectIds !== undefined && (!Array.isArray(featuredProjectIds) || featuredProjectIds.length > MAX_FEATURED_PROJECTS)) return res.status(400).json({ error: `Max ${MAX_FEATURED_PROJECTS} featured projects` });
     if (skillTags !== undefined) {
-      if (!Array.isArray(skillTags) || skillTags.length > 20) return res.status(400).json({ message: "Invalid skillTags" });
+      if (!Array.isArray(skillTags) || skillTags.length > MAX_SKILL_TAGS) return res.status(400).json({ error: "Invalid skillTags" });
       for (const t of skillTags) {
-        if (typeof t?.category !== "string" || t.category.length > 50) return res.status(400).json({ message: "Invalid skill category" });
-        if (!Array.isArray(t?.items) || t.items.length > 30 || t.items.some((i: any) => typeof i !== "string" || i.length > 50)) return res.status(400).json({ message: "Invalid skill items" });
+        if (typeof t?.category !== "string" || t.category.length > MAX_CATEGORY_LEN) return res.status(400).json({ error: "Invalid skill category" });
+        if (!Array.isArray(t?.items) || t.items.length > MAX_ITEMS_PER_TAG || t.items.some((i: string) => typeof i !== "string" || i.length > MAX_ITEM_LEN)) return res.status(400).json({ error: "Invalid skill items" });
       }
     }
     if (projectDescriptionOverrides !== undefined) {
-      if (typeof projectDescriptionOverrides !== "object" || Array.isArray(projectDescriptionOverrides)) return res.status(400).json({ message: "Invalid project overrides" });
+      if (typeof projectDescriptionOverrides !== "object" || Array.isArray(projectDescriptionOverrides)) return res.status(400).json({ error: "Invalid project overrides" });
       for (const [k, v] of Object.entries(projectDescriptionOverrides)) {
-        if (typeof k !== "string" || typeof v !== "string" || v.length > 1000) return res.status(400).json({ message: "Invalid project override value" });
+        if (typeof k !== "string" || typeof v !== "string" || v.length > MAX_OVERRIDE_LEN) return res.status(400).json({ error: "Invalid project override value" });
       }
     }
     if (credlyBadges !== undefined) {
-      if (!Array.isArray(credlyBadges) || credlyBadges.length > 4) return res.status(400).json({ message: "Max 4 Credly badges" });
+      if (!Array.isArray(credlyBadges) || credlyBadges.length > MAX_CREDLY_BADGES) return res.status(400).json({ error: `Max ${MAX_CREDLY_BADGES} Credly badges` });
       for (const b of credlyBadges) {
-        if (typeof b?.id !== "string" || !/^[0-9a-f-]{36}$/i.test(b.id)) return res.status(400).json({ message: "Invalid Credly badge ID" });
-        if (b.label !== undefined && (typeof b.label !== "string" || b.label.length > 100)) return res.status(400).json({ message: "Credly badge label too long (max 100)" });
+        if (typeof b?.id !== "string" || !UUID_RE.test(b.id)) return res.status(400).json({ error: "Invalid Credly badge ID" });
+        if (b.label !== undefined && (typeof b.label !== "string" || b.label.length > MAX_BADGE_LABEL)) return res.status(400).json({ error: `Credly badge label too long (max ${MAX_BADGE_LABEL})` });
       }
     }
 
@@ -196,12 +212,12 @@ const PatchHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   } catch (error) {
     if (error instanceof ValidateError) {
       return res.status(400).json({
-        message: error.message,
+        error: error.message,
       });
     }
     if (error instanceof AuthError) {
       return res.status(401).json({
-        message: error.message,
+        error: error.message,
       });
     }
     console.error(error);
@@ -217,8 +233,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       return DeleteHandler(req, res);
     case "PATCH":
       return PatchHandler(req, res);
+    default:
+      return res.status(405).json({ error: "method not allowed" });
   }
-  res.status(405).json({
-    error: "method not allowed",
-  });
 }

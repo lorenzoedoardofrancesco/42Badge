@@ -24,7 +24,7 @@ export function SkillTagsCard({
           {skillTags.map((tag, i) => {
             const c = SKILL_PALETTE[i % SKILL_PALETTE.length];
             return (
-              <div key={i}>
+              <div key={tag.category}>
                 <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: c.text, fontFamily: "'HelveticaNeue', sans-serif" }}>
                   {tag.category}
                 </div>

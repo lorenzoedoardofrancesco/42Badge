@@ -57,7 +57,7 @@ const Home = () => {
         ...updates,
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? "Failed to save changes.";
+      const msg = err?.response?.data?.error ?? "Failed to save changes.";
       showModal({ title: "Error", message: msg, icon: "alert" });
     }
   }, [isDisplayEmail, isDisplayName, showModal]);
@@ -112,7 +112,7 @@ const Home = () => {
       meta = r.data;
     } catch (err: any) {
       setCredlyAdding(false);
-      const msg = err?.response?.data?.message ?? "Failed to fetch badge.";
+      const msg = err?.response?.data?.error ?? "Failed to fetch badge.";
       if (showErrors) showModal({ title: err?.response?.status === 403 ? "Badge ownership mismatch" : "Failed to fetch badge", message: msg, icon: "alert" });
       return;
     }
@@ -154,6 +154,10 @@ const Home = () => {
   };
 
   const saveExp = async () => {
+    if (!expForm.companyName?.trim() || !expForm.startDate || !expForm.description?.trim()) {
+      showModal({ title: "Missing fields", message: "Company, start date, and description are required.", icon: "alert" });
+      return;
+    }
     try {
       if (editingExpId) {
         const { data: updated } = await axios.patch(`/api/me/work-experiences/${editingExpId}`, expForm);
@@ -387,7 +391,7 @@ const Home = () => {
                                   setCustomPhotoUrl("");
                                   setPhotoMode("none");
                                 } catch (err: any) {
-                                  const msg = err?.response?.data?.message ?? "Failed to delete photo.";
+                                  const msg = err?.response?.data?.error ?? "Failed to delete photo.";
                                   showModal({ title: "Error", message: msg, icon: "alert" });
                                 }
                               }}
@@ -414,7 +418,7 @@ const Home = () => {
                                     setCustomPhotoUrl(res.url);
                                     setPhotoMode("custom");
                                   } catch (err: any) {
-                                    showModal({ title: "Upload failed", message: err?.response?.data?.message ?? "Something went wrong.", icon: "alert" });
+                                    showModal({ title: "Upload failed", message: err?.response?.data?.error ?? "Something went wrong.", icon: "alert" });
                                   } finally {
                                     setPhotoUploading(false);
                                   }
@@ -539,7 +543,7 @@ const Home = () => {
                       Entries with a company name, start date and description appear on your CV.
                     </p>
                     <div className="mb-3 px-3 py-2 rounded-md bg-amber-950/30 border border-amber-900/50 text-xs text-amber-400">
-                      The 42 API doesn&apos;t expose contract details — fill in all fields manually, including for 42-validated entries.
+                      The 42 API doesn&apos;t expose contract details - fill in all fields manually, including for 42-validated entries.
                     </div>
                     {expLoading ? (
                       <p className="text-xs text-neutral-500">Loading…</p>
@@ -667,7 +671,7 @@ const Home = () => {
 
                   <div>
                     <p className="text-sm font-medium text-neutral-200 mb-1">Project GitHub Links</p>
-                    <p className="text-xs text-neutral-500 mb-3">Link each project to its GitHub repo — recruiters see a clickable icon on your CV.</p>
+                    <p className="text-xs text-neutral-500 mb-3">Link each project to its GitHub repo - recruiters see a clickable icon on your CV.</p>
                     <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                       {projectList.map((project) => {
                         const slug = project.project.slug;

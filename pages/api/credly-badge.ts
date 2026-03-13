@@ -23,14 +23,14 @@ function namesMatch(a: string, b: string): boolean {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "GET") return res.status(405).json({ message: "Method not allowed" });
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   const token = await getToken({ req });
-  if (!token) return res.status(401).json({ message: "Unauthorized" });
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
 
   const { id } = req.query as { id?: string };
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
-    return res.status(400).json({ message: "Invalid badge ID" });
+    return res.status(400).json({ error: "Invalid badge ID" });
   }
 
   // Get the user's real display name from DB (more reliable than token.name)
@@ -47,9 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       signal: AbortSignal.timeout(8000),
     });
     const contentLength = parseInt(jsonRes.headers.get("content-length") ?? "0", 10);
-    if (contentLength > 1024 * 1024) return res.status(502).json({ message: "Response too large" });
+    if (contentLength > 1024 * 1024) return res.status(502).json({ error: "Response too large" });
     const jsonText = await jsonRes.text();
-    if (jsonText.length > 1024 * 1024) return res.status(502).json({ message: "Response too large" });
+    if (jsonText.length > 1024 * 1024) return res.status(502).json({ error: "Response too large" });
     const json = (() => { try { return JSON.parse(jsonText); } catch { return null; } })();
     const bt = json?.data?.badge_template;
     const recipient: string | null =
@@ -77,9 +77,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       signal: AbortSignal.timeout(8000),
     });
     const htmlContentLength = parseInt(htmlRes.headers.get("content-length") ?? "0", 10);
-    if (htmlContentLength > 2 * 1024 * 1024) return res.status(502).json({ message: "Response too large" });
+    if (htmlContentLength > 2 * 1024 * 1024) return res.status(502).json({ error: "Response too large" });
     const html = await htmlRes.text();
-    if (html.length > 2 * 1024 * 1024) return res.status(502).json({ message: "Response too large" });
+    if (html.length > 2 * 1024 * 1024) return res.status(502).json({ error: "Response too large" });
 
     // Extract recipient from og:title: "Badge Name was issued by Issuer to First Last."
     const ogTitleMatch = html.match(/property="og:title"\s+content="([^"]+)"/i)
@@ -103,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (!imageUrl && !name) {
-      return res.status(404).json({ message: "Badge not found or not public" });
+      return res.status(404).json({ error: "Badge not found or not public" });
     }
 
     // Verify recipient name
@@ -115,6 +115,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ name, imageUrl, issuer: null });
   } catch {
-    return res.status(500).json({ message: "Failed to fetch badge metadata" });
+    return res.status(500).json({ error: "Failed to fetch badge metadata" });
   }
 }

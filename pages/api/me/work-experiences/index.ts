@@ -65,8 +65,8 @@ const PostHandler = async (req: NextApiRequest, res: NextApiResponse) => {
     description?: string;
   };
 
-  if (!type || !employmentType) {
-    return res.status(400).json({ error: "type and employmentType are required" });
+  if (!type || !employmentType || !companyName?.trim() || !startDate || !description?.trim()) {
+    return res.status(400).json({ error: "type, employmentType, companyName, startDate, and description are required" });
   }
 
   if (type !== "FORTY_TWO" && type !== "EXTERNAL") {
@@ -136,7 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "method not allowed" });
   } catch (error) {
     if (error instanceof AuthError) {
-      return res.status(401).json({ message: error.message });
+      return res.status(401).json({ error: error.message });
     }
     console.error(error);
     throw error;

@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   index.tsx                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: jaeskim <jaeskim@student.42seoul.kr>       +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2020/11/22 03:04:45 by jaeskim           #+#    #+#             */
-/*   Updated: 2022/04/04 23:36:50 by jaeskim          ###   ########seoul.kr  */
-/*                                                                            */
-/* ************************************************************************** */
-
 import React from "react";
 import { ProjectUser } from "../../../lib/api/42api";
 import calculateStringWidth from "../../../lib/calculateStringWidth";

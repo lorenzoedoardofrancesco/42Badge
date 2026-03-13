@@ -59,7 +59,7 @@ const Stats = ({ data }: StatsProps) => {
   const badgeSize = 32;
   const badgeGap = 8;
   const badgeTotalW = badges.length * badgeSize + (badges.length - 1) * badgeGap;
-  const headerBadgeCenterX = (230 + 424) / 2; // 327 — midpoint between title end and logo start
+  const headerBadgeCenterX = (230 + 424) / 2; // 327 - midpoint between title end and logo start
   const headerBadgeStartX = headerBadgeCenterX - badgeTotalW / 2;
   const headerBadgeY = 41 - badgeSize / 2; // same vertical center as 42 logo (y=25)
 

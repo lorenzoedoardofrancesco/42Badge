@@ -50,15 +50,15 @@ const GetHandler = async (req: NextApiRequest, res: NextApiResponse) => {
     res.setHeader("Expires", "0");
     if (error instanceof UserNotFound) {
       return res.status(401).json({
-        message: error.message,
+        error: error.message,
       });
     }
     if (error instanceof FTAccountNotLinked) {
       return res.status(403).json({
-        message: error.message,
+        error: error.message,
       });
     }
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
