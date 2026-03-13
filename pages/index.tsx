@@ -28,6 +28,26 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+const StarButton = ({ starCount }: { starCount: number | null }) => (
+  <div className="relative group">
+    <a
+      href="https://github.com/lorenzoedoardofrancesco/42cv"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 hover:border-yellow-500/50 text-neutral-300 hover:text-yellow-400 text-xs font-medium transition-all shadow-lg"
+    >
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-yellow-400">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+      Star on GitHub
+      {starCount !== null && <span className="text-neutral-500">{starCount}</span>}
+    </a>
+    <div className="absolute bottom-full left-0 mb-2 w-52 px-3 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-xs text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
+      42cv is free and open source. A star helps others discover it and motivates new features!
+    </div>
+  </div>
+);
+
 const StatsWrapper = ({ data }: StatsProps) => {
   const [isShow, setIsShow] = useState(false);
 
@@ -797,6 +817,14 @@ const Home = () => {
   const [photoMode, setPhotoMode] = useState<"none" | "42campus" | "custom">((data as any).photoMode ?? "none");
   const [customPhotoUrl, setCustomPhotoUrl] = useState<string>((data as any).customPhotoUrl ?? "");
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [starCount, setStarCount] = useState<number | null>(null);
+  useEffect(() => {
+    fetch("https://api.github.com/repos/lorenzoedoardofrancesco/42cv")
+      .then((r) => r.json())
+      .then((d) => { if (typeof d.stargazers_count === "number") setStarCount(d.stargazers_count); })
+      .catch(() => {});
+  }, []);
+
   const [isDisplayProjectCount, setIsDisplayProjectCount] = useState((data as any).isDisplayProjectCount ?? true);
   const [isPublicProfile, setIsPublicProfile] = useState((data as any).isPublicProfile ?? false);
   const [isDisplayOutstandingVotes, setIsDisplayOutstandingVotes] = useState((data as any).isDisplayOutstandingVotes ?? true);
@@ -1011,9 +1039,16 @@ const Home = () => {
       <Head>
         <title>42cv.dev</title>
       </Head>
+      {/* Star button - mobile only (top) */}
+      <div className="flex sm:hidden justify-center pt-2 pb-1">
+        <StarButton starCount={starCount} />
+      </div>
+
+      <div className="sm:hidden border-t border-neutral-800 mt-2 mb-0" />
+
       {/* 42CV Hero + Section */}
       <section className="space-y-4">
-        <div className="text-center pt-4">
+        <div className="text-center pt-2 sm:pt-4">
           <div className="flex items-center justify-center gap-3">
             <h1 className="text-4xl font-bold tracking-tight text-white">42cv</h1>
             <span className="px-2 py-0.5 text-xs font-bold tracking-widest uppercase rounded-full bg-green-500/20 text-green-400 border border-green-500/40 animate-pulse">
@@ -1767,6 +1802,11 @@ const Home = () => {
         </div>
         <FeedbackForm login={data.extended42Data.login} />
       </section>
+
+      {/* Star button - desktop only (fixed bottom-left) */}
+      <div className="hidden sm:block fixed bottom-5 left-5 z-50">
+        <StarButton starCount={starCount} />
+      </div>
 
       {modalNode}
     </Layout>
