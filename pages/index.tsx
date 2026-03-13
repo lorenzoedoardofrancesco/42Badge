@@ -1072,7 +1072,7 @@ const Home = () => {
               </div>
 
               {/* Tab bar */}
-              <div className="flex border-b border-neutral-800 -mx-4 px-4 gap-1">
+              <div className="flex border-b border-neutral-800 -mx-4 px-4 gap-1 overflow-x-auto scrollbar-none">
                 {([
                   { id: "profile", label: "Profile" },
                   { id: "experiences", label: "Experiences" },
@@ -1083,7 +1083,7 @@ const Home = () => {
                   <button
                     key={id}
                     onClick={() => setActiveTab(id)}
-                    className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                    className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px shrink-0 ${
                       activeTab === id
                         ? "border-green-500 text-green-400"
                         : "border-transparent text-neutral-500 hover:text-neutral-300"
@@ -1143,7 +1143,7 @@ const Home = () => {
                         )}
                         <div className="flex-1">
                           <label className={`flex items-center justify-center w-full h-16 border-2 border-dashed border-neutral-700 rounded-lg cursor-pointer hover:border-neutral-500 transition-colors ${photoUploading ? "opacity-50 pointer-events-none" : ""}`}>
-                            <span className="text-xs text-neutral-500">{photoUploading ? "Uploading…" : "Click to upload JPG/PNG · max 200 KB · square recommended"}</span>
+                            <span className="text-xs text-neutral-500 text-center">{photoUploading ? "Uploading…" : "Click to upload JPG/PNG · max 200 KB · square recommended"}</span>
                             <input type="file" accept="image/jpeg,image/png" className="hidden"
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];

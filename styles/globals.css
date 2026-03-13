@@ -9,3 +9,10 @@
     @apply bg-[#0a0a0a] text-neutral-200;
   }
 }
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
