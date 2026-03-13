@@ -7,6 +7,29 @@ const BLOCKED_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const MONTH_NAMES = ["january","february","march","april","may","june","july","august","september","october","november","december"];
 
+const INITIAL_DELAY_MS = 2000;
+
+async function withRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      attempt++;
+      const isConnectionError =
+        err.message?.includes("Connection terminated") ||
+        err.message?.includes("connection") ||
+        err.code === "ECONNRESET" ||
+        err.code === "ETIMEDOUT";
+      if (!isConnectionError) throw err;
+      const delay = INITIAL_DELAY_MS * 2 ** (attempt - 1);
+      console.warn(`[retry] ${label} attempt ${attempt} failed: ${err.message}. Retrying in ${(delay / 1000).toFixed(0)}s...`);
+      try { await prisma.$disconnect(); } catch {}
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+}
+
 type Entry = { login: string; level: number; cohortYear: string; cohortMonth: string };
 
 /** Derive cohort from begin_at (student since), with pool fallback for transfers (>6mo gap). */
@@ -49,7 +72,9 @@ async function fetchGroupLogins(groupId: number): Promise<string[]> {
 }
 
 async function getBlockedLogins(): Promise<Set<string>> {
-  const cached = await (prisma as any).blockedLoginsCache.findUnique({ where: { id: 1 } });
+  const cached = await withRetry("blocked cache read", () =>
+    (prisma as any).blockedLoginsCache.findUnique({ where: { id: 1 } })
+  );
   if (cached && Date.now() - new Date(cached.updatedAt).getTime() < BLOCKED_TTL_MS) {
     console.log(`[blocked] From cache (${cached.logins.length})`);
     return new Set(cached.logins);
@@ -60,11 +85,13 @@ async function getBlockedLogins(): Promise<Set<string>> {
     fetchGroupLogins(STAFF_GROUP),
   ]);
   const logins = [...new Set([...testLogins, ...staffLogins])];
-  await (prisma as any).blockedLoginsCache.upsert({
-    where: { id: 1 },
-    update: { logins },
-    create: { id: 1, logins },
-  });
+  await withRetry("blocked cache write", () =>
+    (prisma as any).blockedLoginsCache.upsert({
+      where: { id: 1 },
+      update: { logins },
+      create: { id: 1, logins },
+    })
+  );
   console.log(`[blocked] Refreshed (${logins.length})`);
   return new Set(logins);
 }
@@ -163,10 +190,12 @@ async function main() {
   const campusCohortRankMap = new Map<string, { rank: number; total: number }>();
   const loginCampusMap = new Map<string, number>();
 
-  const dbUsers = await (prisma as any).user.findMany({
-    where: { ftSchoolVerified: true },
-    select: { extended42Data: true },
-  });
+  const dbUsers = await withRetry("fetch db users", () =>
+    (prisma as any).user.findMany({
+      where: { ftSchoolVerified: true },
+      select: { extended42Data: true },
+    })
+  );
   const campusIds = new Set<number>();
   for (const u of dbUsers) {
     const d = u.extended42Data as any;
@@ -208,7 +237,7 @@ async function main() {
   const allLogins = new Set([...allTimeRankMap.keys(), ...campusCohortRankMap.keys()]);
   let upserted = 0;
 
-  const BATCH_SIZE = 1000;
+  const BATCH_SIZE = 500;
   const COLS = 12;
   const loginArray = Array.from(allLogins);
   for (let i = 0; i < loginArray.length; i += BATCH_SIZE) {
@@ -241,25 +270,27 @@ async function main() {
       );
     }
 
-    await (prisma as any).$executeRawUnsafe(
-      `INSERT INTO "RankingCache" ("login", "level", "poolYear", "poolMonth", "campusId", "allTimeRank", "allTimeTotal", "cohortRank", "cohortTotal", "campusCohortRank", "campusCohortTotal", "checkedAt")
-       VALUES ${placeholders.join(", ")}
-       ON CONFLICT ("login") DO UPDATE SET
-         "level" = EXCLUDED."level",
-         "poolYear" = EXCLUDED."poolYear",
-         "poolMonth" = EXCLUDED."poolMonth",
-         "campusId" = EXCLUDED."campusId",
-         "allTimeRank" = EXCLUDED."allTimeRank",
-         "allTimeTotal" = EXCLUDED."allTimeTotal",
-         "cohortRank" = EXCLUDED."cohortRank",
-         "cohortTotal" = EXCLUDED."cohortTotal",
-         "campusCohortRank" = EXCLUDED."campusCohortRank",
-         "campusCohortTotal" = EXCLUDED."campusCohortTotal",
-         "checkedAt" = EXCLUDED."checkedAt"`,
-      ...values
+    await withRetry(`upsert batch ${i}-${i + batch.length}`, () =>
+      (prisma as any).$executeRawUnsafe(
+        `INSERT INTO "RankingCache" ("login", "level", "poolYear", "poolMonth", "campusId", "allTimeRank", "allTimeTotal", "cohortRank", "cohortTotal", "campusCohortRank", "campusCohortTotal", "checkedAt")
+         VALUES ${placeholders.join(", ")}
+         ON CONFLICT ("login") DO UPDATE SET
+           "level" = EXCLUDED."level",
+           "poolYear" = EXCLUDED."poolYear",
+           "poolMonth" = EXCLUDED."poolMonth",
+           "campusId" = EXCLUDED."campusId",
+           "allTimeRank" = EXCLUDED."allTimeRank",
+           "allTimeTotal" = EXCLUDED."allTimeTotal",
+           "cohortRank" = EXCLUDED."cohortRank",
+           "cohortTotal" = EXCLUDED."cohortTotal",
+           "campusCohortRank" = EXCLUDED."campusCohortRank",
+           "campusCohortTotal" = EXCLUDED."campusCohortTotal",
+           "checkedAt" = EXCLUDED."checkedAt"`,
+        ...values
+      )
     );
     upserted += batch.length;
-    if ((i + BATCH_SIZE) % 5000 === 0) console.log(`[rankings] Upserted ${upserted}...`);
+    if (upserted % 5000 === 0) console.log(`[rankings] Upserted ${upserted}...`);
   }
 
   console.log(`[rankings] Done: ${upserted} students ranked`);
