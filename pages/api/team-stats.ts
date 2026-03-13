@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import prisma from "../../../db";
-import { axiosClientFor42 } from "../../../lib/api/42api";
+import prisma from "../../db";
+import { axiosClientFor42 } from "../../lib/api/42api";
 
 const TEAM_CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours - outstanding count can change
 

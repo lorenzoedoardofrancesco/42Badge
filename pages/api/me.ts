@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
 import { v2 as cloudinary } from "cloudinary";
-import prisma from "../../../db";
+import prisma from "../../db";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -11,7 +11,7 @@ cloudinary.config({
 import {
   updateUserExtends42Data,
   UserNotFound,
-} from "../../../lib/updateUserExtends42Data";
+} from "../../lib/updateUserExtends42Data";
 
 class AuthError extends Error {
   constructor() {

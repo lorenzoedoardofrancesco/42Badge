@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import prisma from "../../../../db";
-import { axiosClientFor42 } from "../../../../lib/api/42api";
+import prisma from "../../../db";
+import { axiosClientFor42 } from "../../../lib/api/42api";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 

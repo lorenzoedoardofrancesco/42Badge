@@ -42,7 +42,7 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
         ...prev,
         status: "loading",
       }));
-      const { data } = await axios.get<UserType>("/api/v2/me");
+      const { data } = await axios.get<UserType>("/api/me");
 
       const accounts = collection.keyBy(data.accounts, "provider");
       if (!accounts["42-school"]) {

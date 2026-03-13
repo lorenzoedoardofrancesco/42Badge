@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import prisma from "../../../../../db";
-import { EMPLOYMENT_TYPES } from "../../../../../lib/workExperiences";
+import prisma from "../../../../db";
+import { EMPLOYMENT_TYPES } from "../../../../lib/workExperiences";
 
 const VALID_EMPLOYMENT_VALUES = new Set<string>(EMPLOYMENT_TYPES.map(t => t.value));
 

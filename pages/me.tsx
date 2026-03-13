@@ -76,7 +76,7 @@ const DeleteUser = () => {
     if (confirm("This operation cannot be canceled. Are you sure?")) {
       setIsLoading(true);
       try {
-        await axios.delete("/api/v2/me", {
+        await axios.delete("/api/me", {
           withCredentials: true,
         });
         alert("Account deleted.");

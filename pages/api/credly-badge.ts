@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import prisma from "../../../db";
+import prisma from "../../db";
 
 // Normalize a name for comparison: lowercase, strip accents, remove punctuation, collapse spaces
 function normalizeName(name: string): string {
