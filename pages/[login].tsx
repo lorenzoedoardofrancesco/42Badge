@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import Head from "next/head";
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/router";
 import prisma from "../db";
 import collection from "lodash-es/collection";
 import { getBase64ImageFromUrl } from "../lib/getBase64ImageFromUrl";
@@ -36,6 +37,9 @@ export default function CVPage({
   isViewer42: boolean;
   isDisplayJourney: boolean;
 }) {
+  const { query } = useRouter();
+  const isPreview = query.preview === "1";
+
   const [dark, setDark] = useState(defaultDarkMode);
   const t = tokens(dark);
   const accent = t.accent;
@@ -134,6 +138,12 @@ export default function CVPage({
         <meta name="description" content={`42 student at ${profile.campus} - level ${Math.floor(mainCursus?.level ?? 0)}, ${validatedProjects.length} validated projects.`} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={`Level ${Math.floor(mainCursus?.level ?? 0)} · ${mainCursus?.grade ?? "Student"} · ${profile.campus}`} />
+        <meta property="og:image" content={`https://image.thum.io/get/width/1200/fullpage/https://42cv.dev/${profile.login}?preview=1`} />
+        <meta property="og:image:width" content="1200" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content={`https://image.thum.io/get/width/1200/fullpage/https://42cv.dev/${profile.login}?preview=1`} />
+        {isPreview && <meta name="robots" content="noindex" />}
+
         <style>{`
           @font-face { font-family: 'HelveticaNeue'; src: url('/assets/fonts/helvetica-neue/HelveticaNeueLight.otf') format('opentype'); font-weight: 300; font-style: normal; }
           @font-face { font-family: 'HelveticaNeue'; src: url('/assets/fonts/helvetica-neue/HelveticaNeueRoman.otf') format('opentype'); font-weight: 400; font-style: normal; }
@@ -164,7 +174,7 @@ export default function CVPage({
       </Head>
 
       <div
-        className="min-h-screen transition-colors duration-300 [overflow-x:clip]"
+        className={isPreview ? "transition-colors duration-300" : "min-h-screen transition-colors duration-300 [overflow-x:clip]"}
         style={{ backgroundColor: t.bg, color: t.text, fontFamily: "'HelveticaNeue', sans-serif" }}
       >
         <CvHeader
@@ -181,45 +191,48 @@ export default function CVPage({
           showOutstandingVotes={showOutstandingVotes}
           rankings={rankings}
           lvlBarWidth={lvlBarWidth}
-          showJourneyTab={showJourneyTab}
+          showJourneyTab={isPreview ? false : showJourneyTab}
           view={view}
           setView={setView}
+          hideControls={isPreview}
         />
 
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-10">
-          {(view === "overview" || !isDisplayJourney) && hasOverview ? (
-            <CvOverview
-              profile={profile}
-              featuredProjects={featuredProjects}
-              accent={accent}
-              t={t}
-              showOutstandingVotes={showOutstandingVotes}
-              correctionNumbers={correctionNumbers}
-              teamStats={teamStats}
-              projectDescriptions={projectDescriptions}
-              isViewer42={isViewer42}
-            />
-          ) : (
-            <CvJourney
-              profile={profile}
-              validatedProjects={validatedProjects}
-              skills={skills}
-              skillView={skillView}
-              setSkillView={setSkillView}
-              accent={accent}
-              t={t}
-              showOutstandingVotes={showOutstandingVotes}
-              correctionNumbers={correctionNumbers}
-              teamStats={teamStats}
-              projectDescriptions={projectDescriptions}
-              expandedProjectId={expandedProjectId}
-              toggleProject={toggleProject}
-              isViewer42={isViewer42}
-            />
-          )}
-        </main>
+        {!isPreview && (
+          <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-10">
+            {(view === "overview" || !isDisplayJourney) && hasOverview ? (
+              <CvOverview
+                profile={profile}
+                featuredProjects={featuredProjects}
+                accent={accent}
+                t={t}
+                showOutstandingVotes={showOutstandingVotes}
+                correctionNumbers={correctionNumbers}
+                teamStats={teamStats}
+                projectDescriptions={projectDescriptions}
+                isViewer42={isViewer42}
+              />
+            ) : (
+              <CvJourney
+                profile={profile}
+                validatedProjects={validatedProjects}
+                skills={skills}
+                skillView={skillView}
+                setSkillView={setSkillView}
+                accent={accent}
+                t={t}
+                showOutstandingVotes={showOutstandingVotes}
+                correctionNumbers={correctionNumbers}
+                teamStats={teamStats}
+                projectDescriptions={projectDescriptions}
+                expandedProjectId={expandedProjectId}
+                toggleProject={toggleProject}
+                isViewer42={isViewer42}
+              />
+            )}
+          </main>
+        )}
 
-        <footer className="no-print max-w-6xl mx-auto px-4 sm:px-6 py-6 flex justify-center border-t" style={{ borderColor: t.hrColor }}>
+        <footer className={`max-w-6xl mx-auto px-4 sm:px-6 py-6 flex justify-center border-t${isPreview ? "" : " no-print"}`} style={{ borderColor: t.hrColor }}>
           <Link href="/" className="text-xs transition-colors hover:opacity-80" style={{ color: t.textMuted, fontFamily: "'HelveticaNeue', sans-serif", fontWeight: 300 }}>
             powered by 42cv.dev
           </Link>

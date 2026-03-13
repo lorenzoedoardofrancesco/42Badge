@@ -23,6 +23,7 @@ export function CvHeader({
   showJourneyTab,
   view,
   setView,
+  hideControls,
 }: {
   profile: PublicProfile;
   activeCursus: CursusEntry | undefined;
@@ -40,12 +41,14 @@ export function CvHeader({
   showJourneyTab: boolean;
   view: "overview" | "full";
   setView: (v: "overview" | "full") => void;
+  hideControls?: boolean;
 }) {
   const { integer: lvlInt, pct: lvlPct } = levelDisplay(activeCursus?.level ?? 0);
 
   return (
     <header className="border-b" style={{ borderColor: t.cardBorder, backgroundColor: t.cardBg }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 sm:pt-8 pb-3 relative">
+        {!hideControls && (
         <div className="absolute top-5 sm:top-8 right-4 sm:right-6 z-10 flex flex-col items-end gap-2 no-print">
           <div className="flex items-center gap-2">
             <button
@@ -74,6 +77,7 @@ export function CvHeader({
             </button>
           </div>
         </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-5 sm:gap-7 items-center sm:items-center">
           {profile.profileImage && (
