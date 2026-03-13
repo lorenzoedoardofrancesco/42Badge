@@ -136,12 +136,16 @@ export default function CVPage({
       <Head>
         <title>{title}</title>
         <meta name="description" content={`42 student at ${profile.campus} - level ${Math.floor(mainCursus?.level ?? 0)}, ${validatedProjects.length} validated projects.`} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`https://42cv.dev/${profile.login}`} />
+        <meta property="og:site_name" content="42cv.dev" />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={`Level ${Math.floor(mainCursus?.level ?? 0)} · ${mainCursus?.grade ?? "Student"} · ${profile.campus}`} />
-        <meta property="og:image" content={`https://image.thum.io/get/width/1200/fullpage/https://42cv.dev/${profile.login}?preview=1`} />
+        <meta property="og:image" content={`https://42cv.dev/api/og/${profile.login}`} />
         <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content={`https://image.thum.io/get/width/1200/fullpage/https://42cv.dev/${profile.login}?preview=1`} />
+        <meta name="twitter:image" content={`https://42cv.dev/api/og/${profile.login}`} />
         {isPreview && <meta name="robots" content="noindex" />}
 
         <style>{`
@@ -174,8 +178,15 @@ export default function CVPage({
       </Head>
 
       <div
-        className={isPreview ? "transition-colors duration-300" : "min-h-screen transition-colors duration-300 [overflow-x:clip]"}
-        style={{ backgroundColor: t.bg, color: t.text, fontFamily: "'HelveticaNeue', sans-serif" }}
+        className={isPreview
+          ? "flex flex-col items-center justify-center transition-colors duration-300"
+          : "min-h-screen transition-colors duration-300 [overflow-x:clip]"}
+        style={{
+          backgroundColor: t.bg,
+          color: t.text,
+          fontFamily: "'HelveticaNeue', sans-serif",
+          ...(isPreview ? { height: 630, width: 1200 } : {}),
+        }}
       >
         <CvHeader
           profile={profile}

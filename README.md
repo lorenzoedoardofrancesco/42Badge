@@ -44,11 +44,17 @@ Generate a clean, recruiter-friendly CV page at `42cv.dev/your-login`:
 
 [![42cv.dev/lsimanic preview](https://image.thum.io/get/width/1200/https://42cv.dev/lsimanic)](https://42cv.dev/lsimanic)
 
+### Social preview (OG image)
+
+> Auto-generated via Cloud Run + Cloudinary, cached 6h per user.
+
+[![42cv.dev/lsimanic OG preview](https://42cv.dev/api/og/lsimanic)](https://42cv.dev/lsimanic)
+
 ### Dashboard
 
 > Interactive demo (no login required): [42cv.dev/demo](https://42cv.dev/demo)
 
-[![42cv.dev dashboard demo](https://image.thum.io/get/width/1200/https://42cv.dev/demo)](https://42cv.dev/demo)
+[![42cv.dev dashboard demo](https://res.cloudinary.com/dxzrktdeg/image/upload/v1773438079/readme/demo.png)](https://42cv.dev/demo)
 
 ### Stats badge
 
@@ -88,7 +94,8 @@ See `.env.example` for the required environment variables (42 API credentials, d
 - `NextAuth v4` - authentication via 42 OAuth
 - `Tailwind CSS 4` - CSS-first configuration
 - `ReactDOMServer` - renders React components to static SVG markup
-- `Cloudinary` - profile photo upload and storage
+- `Cloudinary` - profile photo upload, storage, and OG image hosting
+- `Google Cloud Run` - headless Puppeteer service for OG image generation
 - `42 API` - fetches user data, coalitions, projects with rate-limited queue
 
 ## ❓ FAQ

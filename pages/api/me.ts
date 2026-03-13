@@ -49,11 +49,19 @@ const DeleteHandler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const user = await prisma.user.findUnique({
       where: { email: token.email! },
-      select: { id: true, customPhotoUrl: true },
+      select: { id: true, customPhotoUrl: true, extended42Data: true, ogImageUrl: true } as any,
     });
 
     if (user?.customPhotoUrl) {
       await cloudinary.uploader.destroy(`cv_photos/${user.id}`).catch(() => {});
+    }
+
+    const login = (user as any)?.extended42Data?.login;
+    const ogImageUrl = (user as any)?.ogImageUrl as string | null;
+    // Derive login from ogImageUrl as fallback in case extended42Data is missing
+    const ogLogin = login ?? ogImageUrl?.match(/og_previews\/([^./]+)/)?.[1];
+    if (ogLogin) {
+      await cloudinary.uploader.destroy(`og_previews/${ogLogin}`, { resource_type: "image" }).catch(() => {});
     }
 
     await prisma.user.delete({ where: { email: token.email } });

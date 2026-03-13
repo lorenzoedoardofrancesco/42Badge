@@ -67,6 +67,8 @@ model User {
   skillTags                       Json?
   projectDescriptionOverrides     Json?
   credlyBadges                    Json?
+  ogImageUrl                      String?
+  ogImageAt                       DateTime?
   workExperiences                 WorkExperience[]
 }
 

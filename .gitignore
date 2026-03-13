@@ -40,3 +40,6 @@ yarn-error.log*
 
 # prisma
 /generated
+
+# cloud run services
+/cloud-run/
