@@ -46,15 +46,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25_000);
 
-    let pngBuffer: Buffer;
-    try {
-      const screenshotRes = await fetch(screenshotUrl, {
+    const takeScreenshot = async (): Promise<Buffer> => {
+      const r = await fetch(screenshotUrl, {
         signal: controller.signal,
         headers: { "x-og-secret": process.env.OG_SCREENSHOT_SECRET ?? "" },
       });
+      if (!r.ok) throw new Error(`Screenshot service returned ${r.status}`);
+      return Buffer.from(await r.arrayBuffer());
+    };
+
+    let pngBuffer: Buffer;
+    try {
+      try {
+        pngBuffer = await takeScreenshot();
+      } catch {
+        await new Promise((r) => setTimeout(r, 3000));
+        pngBuffer = await takeScreenshot();
+      }
       clearTimeout(timeout);
-      if (!screenshotRes.ok) throw new Error(`Screenshot service returned ${screenshotRes.status}`);
-      pngBuffer = Buffer.from(await screenshotRes.arrayBuffer());
     } catch (err: any) {
       clearTimeout(timeout);
       console.error(`[og] Screenshot failed for ${login}:`, err.message);

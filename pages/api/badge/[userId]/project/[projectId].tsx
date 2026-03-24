@@ -16,6 +16,11 @@ const GetHandler = async (req: NextApiRequest, res: NextApiResponse) => {
       projectId: string;
     };
 
+    if (!projectId || !/^\d+$/.test(projectId)) {
+      res.setHeader("Cache-Control", "public, s-maxage=86400");
+      return res.status(404).json({ error: "Invalid project ID" });
+    }
+
     const user = await updateUserExtends42Data({
       id: userId,
     });
@@ -27,6 +32,11 @@ const GetHandler = async (req: NextApiRequest, res: NextApiResponse) => {
       user.extended42Data.projects_users,
       "id"
     );
+
+    if (!projectsUsers[projectId]) {
+      res.setHeader("Cache-Control", "public, s-maxage=300");
+      return res.status(404).json({ error: "Project not found" });
+    }
 
     if (process.env.NODE_ENV === "production") {
       const ExpiresDate = new Date();
