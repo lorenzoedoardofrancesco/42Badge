@@ -1,13 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
+import path from "path";
 import prisma from "../../db";
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 import {
   updateUserExtends42Data,
   UserNotFound,
@@ -49,19 +44,22 @@ const DeleteHandler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const user = await prisma.user.findUnique({
       where: { email: token.email! },
-      select: { id: true, customPhotoUrl: true, extended42Data: true, ogImageUrl: true } as any,
+      select: { id: true, customPhotoUrl: true, extended42Data: true } as any,
     });
 
+    // Delete local photo file
     if (user?.customPhotoUrl) {
-      await cloudinary.uploader.destroy(`cv_photos/${user.id}`).catch(() => {});
+      for (const ext of ["jpg", "png"]) {
+        const photoPath = path.join("/data/cv_photos", `${user.id}.${ext}`);
+        if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath);
+      }
     }
 
+    // Delete cached OG image
     const login = (user as any)?.extended42Data?.login;
-    const ogImageUrl = (user as any)?.ogImageUrl as string | null;
-    // Derive login from ogImageUrl as fallback in case extended42Data is missing
-    const ogLogin = login ?? ogImageUrl?.match(/og_previews\/([^./]+)/)?.[1];
-    if (ogLogin) {
-      await cloudinary.uploader.destroy(`og_previews/${ogLogin}`, { resource_type: "image" }).catch(() => {});
+    if (login) {
+      const ogPath = path.join("/tmp/og_cache", `${login}.png`);
+      if (fs.existsSync(ogPath)) fs.unlinkSync(ogPath);
     }
 
     await prisma.user.delete({ where: { email: token.email } });

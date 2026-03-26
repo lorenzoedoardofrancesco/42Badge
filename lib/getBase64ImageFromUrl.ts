@@ -2,8 +2,9 @@ import axios from "axios";
 
 const ALLOWED_HOSTS = new Set([
   "cdn.intra.42.fr",
-  "res.cloudinary.com",
   "images.credly.com",
+  "42cv.dev",
+  "localhost",
 ]);
 
 export const getBase64ImageFromUrl = async (url: string) => {

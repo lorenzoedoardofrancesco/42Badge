@@ -1,3 +1,7 @@
 [phases.setup]
 nixpkgsArchive = 'd98abf5cf5914e5e4e9d57205e3af55ca90ffc1d'
-nixPkgs = ['nodejs_22', 'openssl']
+nixPkgs = ['nodejs_22', 'openssl', 'chromium']
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = 'true'
+PUPPETEER_EXECUTABLE_PATH = '/nix/var/nix/profiles/default/bin/chromium'

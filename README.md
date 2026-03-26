@@ -3,7 +3,7 @@
   <h1><a href="https://42cv.dev">42cv.dev</a></h1>
   <p>🚀 Your 42 journey, recruiter-ready. Instant CV page and dynamic stats badges for 🎓 École 42 students.<br />Just sign in!</p>
   <a href="https://github.com/lorenzoedoardofrancesco/42cv/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
-  <a href="https://42cv.dev"><img src="https://img.shields.io/badge/deployed%20on-Vercel-black.svg?logo=vercel" alt="Deployed on Vercel" /></a>
+  <a href="https://42cv.dev"><img src="https://img.shields.io/badge/self--hosted-Hetzner-D50C2D.svg?logo=hetzner" alt="Self-hosted on Hetzner" /></a>
   <img src="https://img.shields.io/badge/React_19-20232A?logo=react&logoColor=61DAFB" alt="React 19" />
   <img src="https://img.shields.io/badge/Next.js_16-black?logo=next.js" alt="Next.js 16" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -15,7 +15,7 @@
 
 Generate a clean, recruiter-friendly CV page at `42cv.dev/your-login`:
 
-- **Profile header** - display name, pool month/year, campus with country flag, profile photo (none / 42 campus / custom upload via Cloudinary), and bio with Markdown support (**bold**, *italic*, `code`)
+- **Profile header** - display name, pool month/year, campus with country flag, profile photo (none / 42 campus / custom upload), and bio with Markdown support (**bold**, *italic*, `code`)
 - **Contact & links** - email, phone, address, GitHub, LinkedIn, and personal website, each with its own icon
 - **42 Statistics** - level progress bar, outstanding votes, and campus cohort / cohort / all-time weekly rankings, each with recruiter-facing tooltips explaining what the numbers mean
 - **Professional experience** - full-time, part-time, freelance, internship, apprenticeship, work-study; Markdown descriptions, auto-sorted by date; 42-validated entries show final score and a "Certified by 42" label
@@ -46,7 +46,7 @@ Generate a clean, recruiter-friendly CV page at `42cv.dev/your-login`:
 
 ### Social preview (OG image)
 
-> Auto-generated via Cloud Run + Cloudinary, cached 6h per user.
+> Auto-generated via local Puppeteer, cached 6h per user.
 
 [![42cv.dev/lsimanic OG preview](https://42cv.dev/api/og/lsimanic)](https://42cv.dev/lsimanic)
 
@@ -90,12 +90,12 @@ See `.env.example` for the required environment variables (42 API credentials, d
 ## 🧰 Tech stack
 
 - `Next.js 16` / `React 19` - Pages Router with Turbopack, API routes for SVG generation
-- `Prisma 7` - ORM with `PostgreSQL` (Neon in production), PrismaPg driver adapter
+- `Prisma 7` - ORM with `PostgreSQL`, PrismaPg driver adapter
 - `NextAuth v4` - authentication via 42 OAuth
 - `Tailwind CSS 4` - CSS-first configuration
 - `ReactDOMServer` - renders React components to static SVG markup
-- `Cloudinary` - profile photo upload, storage, and OG image hosting
-- `Google Cloud Run` - headless Puppeteer service for OG image generation
+- `Puppeteer` - local headless Chromium for OG image screenshots
+- `Dokploy` - self-hosted PaaS on Hetzner VPS
 - `42 API` - fetches user data, coalitions, projects with rate-limited queue
 
 ## ❓ FAQ

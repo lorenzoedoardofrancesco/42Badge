@@ -1,13 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getToken } from "next-auth/jwt";
-import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
+import path from "path";
 import prisma from "../../db";
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+const PHOTO_DIR = "/data/cv_photos";
+
+function ensurePhotoDir() {
+  if (!fs.existsSync(PHOTO_DIR)) fs.mkdirSync(PHOTO_DIR, { recursive: true });
+}
 
 export const config = {
   api: { bodyParser: { sizeLimit: "1mb" } },
@@ -20,7 +21,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const user = await prisma.user.findUnique({ where: { email: token.email! }, select: { id: true } });
       if (!user) return res.status(404).json({ error: "User not found" });
-      await cloudinary.uploader.destroy(`cv_photos/${user.id}`).catch(() => {});
+
+      for (const ext of ["jpg", "png"]) {
+        const filePath = path.join(PHOTO_DIR, `${user.id}.${ext}`);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+
       await prisma.user.update({ where: { id: user.id }, data: { customPhotoUrl: null, photoMode: "none" } });
       return res.status(200).json({ message: "deleted" });
     } catch (err) {
@@ -63,19 +69,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const user = await prisma.user.findUnique({ where: { email: token.email! }, select: { id: true } });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const result = await cloudinary.uploader.upload(dataUrl, {
-      public_id: `cv_photos/${user.id}`,
-      overwrite: true,
-      transformation: [{ width: 512, height: 512, crop: "limit" }],
-      format: "jpg",
-    });
+    ensurePhotoDir();
+    const ext = isPng ? "png" : "jpg";
+    // Remove old file with different extension
+    const otherExt = isPng ? "jpg" : "png";
+    const otherPath = path.join(PHOTO_DIR, `${user.id}.${otherExt}`);
+    if (fs.existsSync(otherPath)) fs.unlinkSync(otherPath);
+
+    const filePath = path.join(PHOTO_DIR, `${user.id}.${ext}`);
+    fs.writeFileSync(filePath, bytes);
+
+    const photoUrl = `${process.env.NEXTAUTH_URL}/api/photos/${user.id}`;
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { customPhotoUrl: result.secure_url, photoMode: "custom" },
+      data: { customPhotoUrl: photoUrl, photoMode: "custom" },
     });
 
-    return res.status(200).json({ url: result.secure_url });
+    return res.status(200).json({ url: photoUrl });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Upload failed" });
